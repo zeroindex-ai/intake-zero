@@ -1,0 +1,186 @@
+# intake-zero — Project Documentation
+
+> **Status: scaffold landed.** Repository skeleton, durable pipeline, and admin shell compile and lint clean. Not yet deployed. Not yet wired to the marketing site.
+
+This document captures the scope, strategic decisions, architecture, and ordered work for `intake-zero` — the Claude-backed prospect intake that will replace the static `mailto:` Contact CTA on `zeroindex.ai`.
+
+---
+
+## 1. Project overview
+
+### What `intake-zero` is
+
+A single-purpose web app at `intake.zeroindex.ai`. A prospect submits a structured intake form; a durable [Vercel Workflow DevKit](https://useworkflow.dev) pipeline persists the submission, enriches it from the company URL, classifies engagement type with Claude Haiku, drafts a triage reply with Claude Sonnet, emails the owner with the draft, and acknowledges the prospect — surviving crashes, redeploys, and tab closes along the way.
+
+The prospect sees a public `/runs/[id]` page that streams the pipeline status. That page is the marketing for the underlying capability: **durable orchestration you can watch happen.**
+
+### Why this project
+
+Three reasons, in order of weight:
+
+1. **The marketing site needs a working app.** The current Contact section is a `mailto:` button. Replacing it with a real intake — that classifies, drafts a response, and tells the prospect what happened — is a more credible artifact for a consultancy than "send an email and wait."
+2. **Vercel Workflow DevKit is the user's next learning target.** intake-zero is a small, real-world reason to learn WDK rather than a synthetic demo. The pipeline shape (fetch → classify → draft → send) is exactly what WDK is for.
+3. **The pipeline output makes triage faster.** The classification + draft reply land in the owner's inbox next to the raw submission, so deciding-and-responding takes minutes instead of being deferred to "later."
+
+### Goals & success criteria for v0.1
+
+| Goal                                                  | Metric                                                                                              | Status |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------ |
+| Form ships and converts                               | `intake.zeroindex.ai` accepts submissions; >0 real submissions within 30 days of launch             | ⏳     |
+| Durable pipeline runs to completion                   | >95% of submissions reach `status: sent` without manual intervention                                | ⏳     |
+| Owner sees triage draft within 30s of submission      | Median time from submit → owner-notify email = ≤30s                                                 | ⏳     |
+| Prospect sees the WDK pipeline live                   | `/runs/[id]` renders 6-step timeline; page reload mid-run resumes display from current step         | ⏳     |
+| Marketing site swap is clean                          | `zeroindexai/index.html` Contact CTA links to `intake.zeroindex.ai`; copy-email fallback remains    | ⏳     |
+| Admin view is usable on phone                         | `/admin` table renders + paginates from a single-handed mobile view                                 | ⏳     |
+
+### Out of scope (for v0.1)
+
+- **Scheduling embed.** A Cal.com link goes in the triage email; no widget on the page.
+- **CRM sync, Stripe, proposals.** Turso is the system of record. Export-friendly schema; integrate later.
+- **Magic-link or OIDC admin auth.** Single shared-secret cookie is enough for one admin.
+- **Multi-tenant.** Single ZeroIndex tenant.
+- **Conversational/chat intake.** Structured form converts better for B2B and feeds the workflow with clean inputs.
+- **Visual-regression tests, multi-browser e2e.** Three critical-path Playwright specs only.
+- **A "thank you" page that pretends to be the AI's reply.** The prospect sees pipeline status, not the LLM's triage of their own message — that stays internal.
+
+---
+
+## 2. Strategic decisions log
+
+### Stack picks
+
+| Decision               | Choice                                                                | Reasoning                                                                                                                                                                          |
+| ---------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **App framework**      | Next.js 16 (app router) on Vercel Pro                                 | Consistent with `ask-zeroindex` and `trace-pack`. Server Components for the admin pages; one client island for the form.                                                           |
+| **Orchestration**      | Vercel Workflow DevKit (`workflow`, `workflow/next`)                  | The whole point. Native to Vercel, crash-safe, the durable-state semantics WDK gives the prospect-facing `/runs/[id]` page are the marketing.                                      |
+| **Storage**            | Turso libsql + drizzle-orm                                            | Consistent with `ask-zeroindex` and `trace-pack`. Per-submission write volume is single-digit per day; SQLite semantics are right.                                                 |
+| **LLM**                | Anthropic SDK directly (no `@workflow/ai` DurableAgent)               | DurableAgent earns its weight when there's a tool-use loop to checkpoint. v0.1 has no tools — two plain step functions calling `messages.create` is simpler and cheaper to reason about. |
+| **Classification model** | `claude-haiku-4-5-20251001`                                         | Cheap, fast, the JSON-classification task is well within Haiku's range.                                                                                                            |
+| **Triage-draft model** | `claude-sonnet-4-6`                                                   | Tone-of-voice and judgment matter here; Sonnet is the right pay-grade.                                                                                                             |
+| **Email**              | Resend + `react-email`-shaped templates                               | Founder-friendly DX, transactional-only, plays well with Vercel.                                                                                                                   |
+| **Styling**            | Tailwind 4 + CSS-variable tokens mirroring `STYLE_GUIDE.md`           | No shadcn (matches `trace-pack`). Hand-rolled primitives keep the dependency surface small and the design tokens portable across all four ZeroIndex sites.                         |
+| **Admin auth**         | Single `ADMIN_TOKEN` env var + httpOnly cookie + `timingSafeEqual`    | One admin, no team, no SSO. Magic-link arrives when there's a second admin to invite.                                                                                              |
+| **Tests**              | Vitest (unit) + Playwright (critical-path e2e)                        | WDK timing-and-state behavior is exactly what Playwright is best at. Vitest covers pure helpers (the classifier parser, dedupe hash).                                              |
+| **License**            | MIT                                                                   | Matches `eval-pack`, `mcp-pack`, `trace-pack`.                                                                                                                                     |
+
+### Things deliberately NOT chosen
+
+| Avoided                                       | Why                                                                                                                                                                                          |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`@workflow/ai` `DurableAgent`**             | Useful when there's a tool-use loop with side effects across many turns. Our two LLM calls are single-shot and live in plain `"use step"` functions; the extra abstraction would add weight without payoff. |
+| **`next-auth` v5 / OIDC**                     | One admin (the founder). One shared secret + cookie + timing-safe compare is fewer moving parts and zero version drift.                                                                      |
+| **shadcn/ui**                                 | The other ZeroIndex sites don't use it. Hand-rolling 5 primitives once is less code than the shadcn registry + generator + Radix dependency footprint.                                       |
+| **Chat-style intake**                         | Reads as gimmicky for B2B consultancy. Structured fields convert better and feed the workflow with cleaner inputs.                                                                           |
+| **Showing the prospect the triage classification** | Honest framing matters. The prospect sees pipeline status; the AI's read of their problem stays between the owner and the LLM.                                                          |
+| **Calendaring widget**                        | A Cal.com link in the triage email is one less third-party script on a page that needs to feel fast.                                                                                         |
+
+### Architecture decisions
+
+| Decision                       | Choice                                                                                                              | Reasoning                                                                                                                                                                                            |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Workflow shape**             | One linear orchestrator (`intakeWorkflow`) with six named steps                                                     | Linear-with-named-steps is what's right for v0.1. Branching/parallel arrives if enrichment grows multiple parallel fetches.                                                                          |
+| **Step contract**              | Each step writes its own status transition + result back to the `submissions` row                                   | The DB row is the canonical view for both the prospect page and the admin. WDK's run history is debug-only; the prospect page reads `submissions.status`.                                            |
+| **Status polling**             | Client polls `/api/intake/[id]/status` every 1.5s                                                                   | WDK has streaming primitives (`getWritable` + readable streams) — defer until polling proves insufficient. At expected single-digit RPS the cost is negligible.                                       |
+| **Idempotent ingest**          | `sha256(email + problem)` dedupe with a 24h window                                                                  | Same prospect double-submitting the same message gets the same `submissionId`. Same prospect submitting a new message starts a new run. Mirrors the timing-safe-auth + idempotent-ingest default from the trace-pack deploy. |
+| **Error boundaries**           | Bad-input → `FatalError` (no retry); transient API failures → `RetryableError` (WDK retries with backoff)           | Per WDK docs. Eliminates the "stuck workflow" failure mode for genuinely transient outages.                                                                                                          |
+| **Enrichment failure mode**    | If URL fetch fails, fall through with un-enriched result (`fetched: false`) rather than failing the run             | A broken consumer URL shouldn't block triage. The classification step receives empty signals; the draft still goes out.                                                                              |
+| **Run page is unauthenticated** | `submissionId` is the random URL token; anyone with the link can see status (not content)                          | Simplest path to demoing WDK off. No PII is rendered on the run page — only the prospect's first name. Defer email-match auth until there's a reason.                                                |
+| **Marketing site change**      | One-line edit: `mailto:` button → `Start intake →` link; copy-email fallback stays                                  | Smallest possible surface area on the marketing side. The marketing site stays static HTML on Cloudflare; intake-zero is a separate app.                                                             |
+
+---
+
+## 3. Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                            Prospect's browser                           │
+│   1. fills out form at intake.zeroindex.ai                              │
+│   2. POST /api/intake → { submissionId }                                │
+│   3. redirected to /runs/[submissionId]                                 │
+│   4. timeline polls /api/intake/[id]/status every 1.5s                  │
+└─────────────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                  intake-zero (Next.js 16 on Vercel Pro)                 │
+│                                                                          │
+│   app/                                                                   │
+│     page.tsx                  public form                                │
+│     runs/[runId]/page.tsx     prospect-visible timeline                  │
+│     admin/                    cookie-gated submissions table             │
+│     api/intake/route.ts       Zod validate → insert → workflow.start    │
+│     api/intake/[id]/status    JSON { status } for polling                │
+│     api/admin/signin          shared-secret cookie                      │
+│                                                                          │
+│   src/workflow/                                                          │
+│     intake.ts                 "use workflow" orchestrator                │
+│     steps/                                                               │
+│       persist                 mark enriching                            │
+│       enrich                  fetch URL + signals                       │
+│       classify                Haiku → engagementType/fitScore           │
+│       draft-triage            Sonnet → reply draft                      │
+│       notify-owner            Resend → abhishek25@outlook.com           │
+│       ack-prospect            Resend → prospect; mark sent              │
+│                                                                          │
+│   /.well-known/workflow/*     WDK runtime (mounted by withWorkflow)     │
+└─────────────────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                            Turso libsql                                  │
+│   submissions                                                            │
+│     id, run_id, status, email, name, company, role,                      │
+│     problem, stack[], timeline, budget, url, dedupe_hash,                │
+│     enrichment (json), classification (json), triage_draft,              │
+│     created_at, updated_at                                               │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Status state machine
+
+```
+received → enriching → classifying → drafting → notifying → sent
+                                                              │
+              (any step) ── RetryableError ──┐                │
+                                              ▼               │
+                                         WDK retries          │
+                                              │               │
+                                              ▼               │
+              (any step) ── FatalError ──→ failed             │
+                                                              ▼
+                                                       prospect ack
+```
+
+---
+
+## 4. Ordered work
+
+What's done, what's next. Ordered, not calendared.
+
+### Done
+
+- v0.1 scaffold: Next.js 16 + WDK + Turso + Resend + Anthropic, typecheck + lint clean (`30bcd4d`)
+- Drizzle schema + first migration generated
+- Playwright config + 3 critical-path e2e specs (happy path, validation, admin gate)
+- Project docs (this file, AGENTS.md, README.md)
+- CI workflow
+
+### Next
+
+1. **Local smoke test** — boot dev with throwaway env vars; verify form renders and the workflow-start path doesn't crash before the Anthropic call.
+2. **Unit test for the classifier parser** — `parseClassification` is the most logic-heavy pure helper; covers happy path, fenced JSON, garbage input.
+3. **GitHub repo** — create `zeroindex-ai/intake-zero`, push, enable Actions.
+4. **Provision Turso + Vercel** — follow `deploy-zeroindex-vercel-app` skill verbatim; env vars pulled from 1Password; `pnpm db:migrate` against Turso.
+5. **First Vercel deploy** — preview URL, full pipeline e2e against real Anthropic + Resend.
+6. **Custom domain** — Cloudflare CNAME `intake.zeroindex.ai` → Vercel; favicon set (5 files) generated from the zeroindexai brand.
+7. **Marketing site swap** — `zeroindexai/index.html:955` `mailto:` → `intake.zeroindex.ai`; copy-email fallback stays.
+8. **End-to-end live test** — submit through the live form; confirm owner-notify and prospect-ack arrive; confirm `/runs/[id]` timeline renders correctly through to `sent`.
+
+### Deferred (v0.2+)
+
+- WDK readable-stream-based live updates (replace polling)
+- Magic-link admin auth
+- Cal.com booking link auto-injected based on `fitScore ≥ 4`
+- CSV export from `/admin`
+- Per-source intake (e.g., separate URL for podcast inquiries with a different prompt)
+- Vitest coverage for the workflow steps with the Anthropic SDK mocked
