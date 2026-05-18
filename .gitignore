@@ -1,0 +1,32 @@
+node_modules
+.next
+out
+build
+.turbo
+
+# env
+.env
+.env.local
+.env.*.local
+
+# db
+*.db
+*.db-journal
+local.db
+
+# editor / OS
+.DS_Store
+.idea
+.vscode
+
+# tests
+playwright-report
+test-results
+coverage
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts

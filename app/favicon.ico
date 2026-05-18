@@ -1,0 +1,1 @@
+PLACEHOLDER — replace with real favicon.ico generated from zeroindexai brand. See feedback_favicon_real_files_for_new_sites: ship the 5-file set (favicon.ico with 16/32/48/64 frames, apple-touch-icon.png, icon-192.png, icon-512.png, manifest.webmanifest). Note: Next 16 intercepts /favicon.ico — file MUST live at app/favicon.ico per feedback_nextjs_favicon_app_dir.

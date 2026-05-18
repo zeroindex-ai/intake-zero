@@ -1,0 +1,20 @@
+CREATE TABLE `submissions` (
+	`id` text PRIMARY KEY NOT NULL,
+	`run_id` text,
+	`status` text DEFAULT 'received' NOT NULL,
+	`email` text NOT NULL,
+	`name` text NOT NULL,
+	`company` text,
+	`role` text,
+	`problem` text NOT NULL,
+	`stack` text DEFAULT '[]' NOT NULL,
+	`timeline` text,
+	`budget` text,
+	`url` text,
+	`dedupe_hash` text NOT NULL,
+	`enrichment` text,
+	`classification` text,
+	`triage_draft` text,
+	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
+	`updated_at` integer DEFAULT (unixepoch()) NOT NULL
+);
