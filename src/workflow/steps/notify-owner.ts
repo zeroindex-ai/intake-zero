@@ -4,7 +4,6 @@ import { eq } from 'drizzle-orm';
 import { db, schema } from '@/db/client';
 import type { ClassificationResult, EnrichmentResult, Submission } from '@/db/schema';
 import { resend } from '@/email/resend';
-import { renderEmail } from '@/email/render';
 import { OwnerNotify } from '@/email/templates/owner-notify';
 import { env } from '@/lib/env';
 import { RetryableError } from 'workflow';
@@ -24,15 +23,13 @@ export async function notifyOwner(input: NotifyInput) {
       to: env().OWNER_EMAIL,
       replyTo: input.submission.email,
       subject: `[intake] ${input.classification.engagementType} · fit ${input.classification.fitScore}/5 · ${input.submission.name}`,
-      html: renderEmail(
-        OwnerNotify({
-          submission: input.submission,
-          enrichment: input.enrichment,
-          classification: input.classification,
-          triage: input.triage,
-          baseUrl: env().PUBLIC_BASE_URL,
-        }),
-      ),
+      react: OwnerNotify({
+        submission: input.submission,
+        enrichment: input.enrichment,
+        classification: input.classification,
+        triage: input.triage,
+        baseUrl: env().PUBLIC_BASE_URL,
+      }),
     });
   } catch (err) {
     throw new RetryableError(`resend owner failed: ${err instanceof Error ? err.message : String(err)}`);
