@@ -1,6 +1,6 @@
 # intake-zero — Project Documentation
 
-> **Status: scaffold landed.** Repository skeleton, durable pipeline, and admin shell compile and lint clean. Not yet deployed. Not yet wired to the marketing site.
+> **Status: live at [intake.zeroindex.ai](https://intake.zeroindex.ai).** Full pipeline (persist → enrich → classify → draft → notify owner → ack prospect) verified end-to-end against production Anthropic + Resend in 19s. Not yet wired to the marketing site. Resend domain not yet verified — `FROM_EMAIL=onboarding@resend.dev` for now, which means owner-notify + prospect-ack only succeed when the recipient matches the Resend account email.
 
 This document captures the scope, strategic decisions, architecture, and ordered work for `intake-zero` — the Claude-backed prospect intake that will replace the static `mailto:` Contact CTA on `zeroindex.ai`.
 
@@ -162,19 +162,22 @@ What's done, what's next. Ordered, not calendared.
 - v0.1 scaffold: Next.js 16 + WDK + Turso + Resend + Anthropic, typecheck + lint clean (`30bcd4d`)
 - Drizzle schema + first migration generated
 - Playwright config + 3 critical-path e2e specs (happy path, validation, admin gate)
-- Project docs (this file, AGENTS.md, README.md)
-- CI workflow
+- Project docs (this file, AGENTS.md, README.md, LICENSE)
+- CI workflow (typecheck + lint + test on push/PR)
+- Vitest unit tests for `parseClassification` (11 cases)
+- Local smoke test caught + fixed the `/admin/signin` redirect-loop bug
+- GitHub repo `zeroindex-ai/intake-zero` (public)
+- Turso DB `intake-zero` provisioned (aws-us-east-1), creds stored in 1Password
+- Vercel project linked to the LLC team, 8 prod env vars set (Turso non-Sensitive for pulls, rest Sensitive)
+- First prod deploy at `intake-zero.vercel.app`, custom domain at `intake.zeroindex.ai`
+- Live e2e: full pipeline reaches `sent` in 19s; row contains correct classification + populated draft
 
-### Next
+### Next (real follow-ups)
 
-1. **Local smoke test** — boot dev with throwaway env vars; verify form renders and the workflow-start path doesn't crash before the Anthropic call.
-2. **Unit test for the classifier parser** — `parseClassification` is the most logic-heavy pure helper; covers happy path, fenced JSON, garbage input.
-3. **GitHub repo** — create `zeroindex-ai/intake-zero`, push, enable Actions.
-4. **Provision Turso + Vercel** — follow `deploy-zeroindex-vercel-app` skill verbatim; env vars pulled from 1Password; `pnpm db:migrate` against Turso.
-5. **First Vercel deploy** — preview URL, full pipeline e2e against real Anthropic + Resend.
-6. **Custom domain** — Cloudflare CNAME `intake.zeroindex.ai` → Vercel; favicon set (5 files) generated from the zeroindexai brand.
-7. **Marketing site swap** — `zeroindexai/index.html:955` `mailto:` → `intake.zeroindex.ai`; copy-email fallback stays.
-8. **End-to-end live test** — submit through the live form; confirm owner-notify and prospect-ack arrive; confirm `/runs/[id]` timeline renders correctly through to `sent`.
+1. **Resend domain verification.** Add the Resend DKIM/SPF records to Cloudflare for `zeroindex.ai`. Once verified, swap `FROM_EMAIL` in Vercel env from `onboarding@resend.dev` → `intake@zeroindex.ai`. Until that happens, prospect-ack only delivers to the Resend-account email; real-prospect emails will silently fail at the ack step.
+2. **Marketing site swap.** In `zeroindexai/index.html` (~line 955), change the Contact CTA `mailto:` button into a link to `https://intake.zeroindex.ai`. Keep the copy-email affordance as a fallback. One-line edit, no surrounding sweep ([[feedback_typography_surgical]]).
+3. **Real favicon brand pass.** Currently borrowing trace-pack's favicon set. Generate intake-zero's own 5-file set (per [[feedback_favicon_real_files_for_new_sites]]) and replace.
+4. **Visible workflow timing fix.** Run page polls every 1.5s — the `notifying` step often resolves in <1s, so users may see the transition flash. Consider a min-duration-per-step display or switch to WDK readable-stream-based updates.
 
 ### Deferred (v0.2+)
 
