@@ -178,7 +178,7 @@ What's done, what's next. Ordered, not calendared.
 ### Next (real follow-ups)
 
 1. **Visible workflow timing fix.** Run page polls every 1.5s — the `notifying` step often resolves in <1s, so users may see the transition flash. Consider a min-duration-per-step display or switch to WDK readable-stream-based updates.
-2. **Org-wide favicon.ico upgrade** (cross-cutting, not intake-zero-specific). All ZeroIndex properties currently ship a favicon.ico with 16/16/32/32 frames (duplicate sizes); the canonical pattern per [[feedback_favicon_real_files_for_new_sites]] is 16/32/48/64. Regenerate once, copy to all 4 properties (zeroindexai, ask-zeroindex, trace-pack, intake-zero, evals-site).
+2. **Shared Stack config.** `src/lib/stack.ts` holds the intake-side copy of the apex's tier 1 + tier 2 pills. The apex still hard-codes them in `zeroindexai/index.html` §Stack. Long-term: extract to a single shared source (small npm package `@zeroindex-ai/stack` or a JSON file consumed by both) so the apex marketing list and the intake picker can't drift. For now they're kept manually in sync.
 
 ### Deferred (v0.2+)
 

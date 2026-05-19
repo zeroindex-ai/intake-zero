@@ -1,0 +1,1 @@
+ALTER TABLE `submissions` ADD `failed_at_step` text;

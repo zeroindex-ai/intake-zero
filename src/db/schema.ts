@@ -22,6 +22,10 @@ export const submissions = sqliteTable('submissions', {
   enrichment: text('enrichment', { mode: 'json' }).$type<EnrichmentResult | null>(),
   classification: text('classification', { mode: 'json' }).$type<ClassificationResult | null>(),
   triageDraft: text('triage_draft'),
+  // When markFailed runs, captures the in-flight status so the UI can show
+  // which step failed. Null on non-failed rows and on rows that failed before
+  // this column existed.
+  failedAtStep: text('failed_at_step'),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),

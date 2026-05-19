@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 
 type Status = 'received' | 'enriching' | 'classifying' | 'drafting' | 'notifying' | 'sent' | 'failed';
+type InFlightStatus = Exclude<Status, 'failed'>;
 
-const STEPS: Array<{ key: Status; label: string }> = [
+const STEPS: Array<{ key: InFlightStatus; label: string }> = [
   { key: 'received', label: 'Received' },
   { key: 'enriching', label: 'Reading your site' },
   { key: 'classifying', label: 'Classifying fit' },
@@ -13,16 +14,26 @@ const STEPS: Array<{ key: Status; label: string }> = [
   { key: 'sent', label: 'Confirmation sent' },
 ];
 
-const ORDER: Status[] = ['received', 'enriching', 'classifying', 'drafting', 'notifying', 'sent'];
+const ORDER: InFlightStatus[] = [
+  'received',
+  'enriching',
+  'classifying',
+  'drafting',
+  'notifying',
+  'sent',
+];
 
 export function RunTimeline({
   submissionId,
   initialStatus,
+  initialFailedAtStep,
 }: {
   submissionId: string;
   initialStatus: Status;
+  initialFailedAtStep?: string | null;
 }) {
   const [status, setStatus] = useState<Status>(initialStatus);
+  const [failedAtStep, setFailedAtStep] = useState<string | null>(initialFailedAtStep ?? null);
 
   useEffect(() => {
     if (status === 'sent' || status === 'failed') return;
@@ -32,8 +43,10 @@ export function RunTimeline({
       try {
         const res = await fetch(`/api/intake/${submissionId}/status`, { cache: 'no-store' });
         if (!res.ok) return;
-        const json = (await res.json()) as { status: Status };
-        if (!cancelled) setStatus(json.status);
+        const json = (await res.json()) as { status: Status; failedAtStep?: string | null };
+        if (cancelled) return;
+        setStatus(json.status);
+        if (json.failedAtStep !== undefined) setFailedAtStep(json.failedAtStep);
       } catch {
         // ignore — next tick will retry
       }
@@ -47,21 +60,26 @@ export function RunTimeline({
     };
   }, [submissionId, status]);
 
-  // When status is 'sent' (terminal success), advance the index past the last
-  // step so every row renders as 'done'. Otherwise the final 'sent' step would
-  // match `i === currentIdx` and show as 'active / in progress'.
-  const currentIdx = status === 'sent' ? ORDER.length : ORDER.indexOf(status);
+  // currentIdx semantics per status:
+  //   'sent'                  → ORDER.length (every step done)
+  //   'failed' with known step → index of that step (failed marker on it, prior done, later pending)
+  //   'failed' with no step    → -1 (legacy rows pre-failedAtStep column; render all pending)
+  //   in-flight               → index of current step (prior done, this one active, later pending)
+  const currentIdx =
+    status === 'sent'
+      ? ORDER.length
+      : status === 'failed'
+        ? failedAtStep
+          ? ORDER.indexOf(failedAtStep as InFlightStatus)
+          : -1
+        : ORDER.indexOf(status as InFlightStatus);
 
   return (
     <ol className="space-y-3">
       {STEPS.map((step, i) => {
-        const state: 'done' | 'active' | 'pending' =
-          status === 'failed'
-            ? i < currentIdx
-              ? 'done'
-              : i === currentIdx
-                ? 'active'
-                : 'pending'
+        const state: 'done' | 'active' | 'pending' | 'failed' =
+          status === 'failed' && i === currentIdx
+            ? 'failed'
             : i < currentIdx
               ? 'done'
               : i === currentIdx
@@ -80,14 +98,35 @@ export function RunTimeline({
                     ? 'var(--accent-go)'
                     : state === 'active'
                       ? 'var(--accent-1)'
-                      : 'var(--bg-soft)',
+                      : state === 'failed'
+                        ? 'var(--error)'
+                        : 'var(--bg-soft)',
                 border:
                   state === 'pending' ? '1px solid var(--line-strong)' : '1px solid transparent',
               }}
             >
               {state === 'done' ? (
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="3"
+                >
                   <polyline points="20 6 9 17 4 12" />
+                </svg>
+              ) : state === 'failed' ? (
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="3"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               ) : state === 'active' ? (
                 <span
@@ -98,10 +137,13 @@ export function RunTimeline({
             </span>
             <span
               className={state === 'pending' ? 'muted-2' : ''}
-              style={{ fontWeight: state === 'active' ? 600 : 400 }}
+              style={{ fontWeight: state === 'active' || state === 'failed' ? 600 : 400 }}
             >
               {step.label}
               {state === 'active' ? <span className="muted-2"> &middot; in progress</span> : null}
+              {state === 'failed' ? (
+                <span style={{ color: 'var(--error)' }}> &middot; failed</span>
+              ) : null}
             </span>
           </li>
         );

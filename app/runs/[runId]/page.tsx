@@ -30,7 +30,11 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
       </p>
 
       <div className="mt-10">
-        <RunTimeline submissionId={row.id} initialStatus={row.status} />
+        <RunTimeline
+          submissionId={row.id}
+          initialStatus={row.status}
+          initialFailedAtStep={row.failedAtStep ?? null}
+        />
       </div>
 
       <p className="mt-12 muted-2 text-sm">
