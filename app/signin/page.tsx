@@ -1,3 +1,7 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = { title: 'Sign in · Intake Admin · ZeroIndex' };
+
 export default function SigninPage() {
   return (
     <section className="pt-10 pb-24 flex justify-center">

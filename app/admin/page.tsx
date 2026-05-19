@@ -1,8 +1,11 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { desc } from 'drizzle-orm';
 import { db, schema } from '@/db/client';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = { title: 'Intake Admin · ZeroIndex' };
 
 export default async function AdminIndex() {
   const rows = await db
@@ -12,44 +15,56 @@ export default async function AdminIndex() {
     .limit(100);
 
   return (
-    <div>
-      <div className="label mb-3">Admin · Submissions</div>
-      <h1 className="text-3xl font-bold tracking-tight mb-8">Intake</h1>
-      {rows.length === 0 ? (
-        <p className="muted">No submissions yet.</p>
-      ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left muted-2 mono text-xs uppercase tracking-wider">
-              <th className="py-2 pr-4">When</th>
-              <th className="py-2 pr-4">Who</th>
-              <th className="py-2 pr-4">Type</th>
-              <th className="py-2 pr-4">Fit</th>
-              <th className="py-2 pr-4">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-t line">
-                <td className="py-3 pr-4 mono num">
-                  {new Date(r.createdAt).toISOString().slice(0, 16).replace('T', ' ')}
-                </td>
-                <td className="py-3 pr-4">
-                  <Link href={`/admin/${r.id}`} className="font-medium hover:opacity-70">
-                    {r.name}
-                  </Link>
-                  <div className="muted-2 text-xs">{r.company ?? '—'}</div>
-                </td>
-                <td className="py-3 pr-4 mono text-xs">{r.classification?.engagementType ?? '—'}</td>
-                <td className="py-3 pr-4 mono text-xs">
-                  {r.classification ? `${r.classification.fitScore}/5` : '—'}
-                </td>
-                <td className="py-3 pr-4 mono text-xs">{r.status}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+    <>
+      <section className="pt-10 pb-8">
+        <div className="label mb-3">Admin</div>
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Submissions.</h1>
+        <p className="mt-4 muted text-base leading-relaxed max-w-4xl">
+          Every intake row, newest first. Click a name for the full triage detail.
+        </p>
+      </section>
+
+      <section className="pt-2 pb-24">
+        <div className="card">
+          {rows.length === 0 ? (
+            <div className="empty-state">No submissions yet.</div>
+          ) : (
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>Who</th>
+                  <th>Type</th>
+                  <th>Fit</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id}>
+                    <td className="ts">
+                      <Link href={`/admin/${r.id}`} className="row-link">
+                        {new Date(r.createdAt).toISOString().slice(0, 16).replace('T', ' ')}
+                      </Link>
+                    </td>
+                    <td>
+                      <Link href={`/admin/${r.id}`} className="row-link font-medium">
+                        {r.name}
+                      </Link>
+                      <div className="muted-2 text-xs">{r.company ?? '—'}</div>
+                    </td>
+                    <td className="num-cell">{r.classification?.engagementType ?? '—'}</td>
+                    <td className="num-cell">
+                      {r.classification ? `${r.classification.fitScore}/5` : '—'}
+                    </td>
+                    <td className="num-cell">{r.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </section>
+    </>
   );
 }

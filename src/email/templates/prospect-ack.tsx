@@ -15,7 +15,7 @@ export function ProspectAck({ submission }: { submission: Submission }) {
       </p>
       <p style={{ marginTop: 24 }}>&mdash; Abhishek</p>
       <p style={{ color: '#71717a', fontSize: 12, marginTop: 24 }}>
-        ZeroIndex · independent AI engineering · zeroindex.ai
+        ZeroIndex &middot; an AI-native software consultancy &middot; zeroindex.ai
       </p>
     </div>
   );
