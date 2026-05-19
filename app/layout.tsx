@@ -3,12 +3,12 @@ import Script from 'next/script';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Start a project — ZeroIndex',
+  title: 'Intake · ZeroIndex',
   description:
     'Tell me about your project. I&rsquo;ll respond within one business day with whether it&rsquo;s a fit and what the next step looks like.',
   metadataBase: new URL(process.env.PUBLIC_BASE_URL ?? 'https://intake.zeroindex.ai'),
   openGraph: {
-    title: 'Start a project — ZeroIndex',
+    title: 'Intake · ZeroIndex',
     description: 'Independent AI engineering. Tell me about your project.',
     url: '/',
     siteName: 'ZeroIndex',

@@ -2,19 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-
-const STACK_SUGGESTIONS = [
-  'Next.js',
-  'Python',
-  'Postgres',
-  'Anthropic',
-  'OpenAI',
-  'LangChain',
-  'Supabase',
-  'Vercel',
-  'AWS',
-  'Snowflake',
-];
+import { STACK_OPTIONS } from '@/lib/stack';
 
 const TIMELINE_OPTIONS = ['ASAP', '1-3 months', '3-6 months', 'Exploring'];
 const BUDGET_OPTIONS = ['< $10k', '$10-25k', '$25-75k', '$75k+', 'Not sure yet'];
@@ -68,7 +56,7 @@ export function IntakeForm() {
     <form
       onSubmit={onSubmit}
       style={{ background: 'var(--card)', color: 'var(--card-ink)' }}
-      className="rounded-2xl p-8 md:p-10 max-w-3xl w-full"
+      className="rounded-2xl p-8 md:p-10 max-w-4xl w-full"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
@@ -128,10 +116,10 @@ export function IntakeForm() {
         />
       </div>
 
-      <div className="mb-4">
+      <div className="mb-8">
         <span className="field-label">Stack (tap any that apply)</span>
-        <div className="flex flex-wrap gap-2">
-          {STACK_SUGGESTIONS.map((s) => {
+        <div className="flex flex-wrap items-center gap-2">
+          {STACK_OPTIONS.map((s) => {
             const on = stack.includes(s);
             return (
               <button
@@ -150,14 +138,26 @@ export function IntakeForm() {
               </button>
             );
           })}
+          {stack.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setStack([])}
+              className="mono text-xs px-2 py-1.5 ml-1 transition-opacity hover:opacity-100"
+              style={{ color: 'var(--card-muted)', opacity: 0.7 }}
+              aria-label="Reset stack selection"
+              title="Reset"
+            >
+              Reset
+            </button>
+          ) : null}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
         <div>
           <span className="field-label">Timeline</span>
           <div className="flex flex-wrap gap-2">
-            {TIMELINE_OPTIONS.map((t) => (
+            {TIMELINE_OPTIONS.slice(0, -1).map((t) => (
               <button
                 key={t}
                 type="button"
@@ -173,12 +173,41 @@ export function IntakeForm() {
                 {t}
               </button>
             ))}
+            <div className="basis-full h-0" aria-hidden />
+            {TIMELINE_OPTIONS.slice(-1).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTimeline(t)}
+                className="mono text-xs px-3 py-1.5 rounded-full transition-colors"
+                style={{
+                  border: '1px solid var(--card-line)',
+                  background: timeline === t ? 'var(--accent-1)' : 'transparent',
+                  color: timeline === t ? 'var(--card-ink)' : 'var(--card-muted)',
+                  borderColor: timeline === t ? 'var(--accent-1)' : 'var(--card-line)',
+                }}
+              >
+                {t}
+              </button>
+            ))}
+            {timeline ? (
+              <button
+                type="button"
+                onClick={() => setTimeline('')}
+                className="mono text-xs px-2 py-1.5 ml-1 transition-opacity hover:opacity-100"
+                style={{ color: 'var(--card-muted)', opacity: 0.7 }}
+                aria-label="Reset timeline selection"
+                title="Reset"
+              >
+                Reset
+              </button>
+            ) : null}
           </div>
         </div>
         <div>
           <span className="field-label">Budget signal</span>
           <div className="flex flex-wrap gap-2">
-            {BUDGET_OPTIONS.map((b) => (
+            {BUDGET_OPTIONS.slice(0, -1).map((b) => (
               <button
                 key={b}
                 type="button"
@@ -194,9 +223,40 @@ export function IntakeForm() {
                 {b}
               </button>
             ))}
+            <div className="basis-full h-0" aria-hidden />
+            {BUDGET_OPTIONS.slice(-1).map((b) => (
+              <button
+                key={b}
+                type="button"
+                onClick={() => setBudget(b)}
+                className="mono text-xs px-3 py-1.5 rounded-full transition-colors"
+                style={{
+                  border: '1px solid var(--card-line)',
+                  background: budget === b ? 'var(--accent-1)' : 'transparent',
+                  color: budget === b ? 'var(--card-ink)' : 'var(--card-muted)',
+                  borderColor: budget === b ? 'var(--accent-1)' : 'var(--card-line)',
+                }}
+              >
+                {b}
+              </button>
+            ))}
+            {budget ? (
+              <button
+                type="button"
+                onClick={() => setBudget('')}
+                className="mono text-xs px-2 py-1.5 ml-1 transition-opacity hover:opacity-100"
+                style={{ color: 'var(--card-muted)', opacity: 0.7 }}
+                aria-label="Reset budget selection"
+                title="Reset"
+              >
+                Reset
+              </button>
+            ) : null}
           </div>
         </div>
       </div>
+
+
 
       {error ? (
         <div style={{ color: 'var(--error)' }} className="mb-4 text-sm">
