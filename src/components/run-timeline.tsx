@@ -47,7 +47,10 @@ export function RunTimeline({
     };
   }, [submissionId, status]);
 
-  const currentIdx = ORDER.indexOf(status);
+  // When status is 'sent' (terminal success), advance the index past the last
+  // step so every row renders as 'done'. Otherwise the final 'sent' step would
+  // match `i === currentIdx` and show as 'active / in progress'.
+  const currentIdx = status === 'sent' ? ORDER.length : ORDER.indexOf(status);
 
   return (
     <ol className="space-y-3">
