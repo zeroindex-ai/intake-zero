@@ -172,12 +172,13 @@ What's done, what's next. Ordered, not calendared.
 - First prod deploy at `intake-zero.vercel.app`, custom domain at `intake.zeroindex.ai`
 - Live e2e: full pipeline reaches `sent` in 14–19s; row contains correct classification + populated draft
 - Resend domain `zeroindex.ai` (apex) verified 2026-05-18; DKIM at `resend._domainkey`, SPF+MX at `send` subdomain (Resend's SES bounce-domain pattern keeps apex SPF untouched); `FROM_EMAIL` swapped to `intake@zeroindex.ai`; cross-address delivery confirmed (prospect-ack to Outlook, owner-notify to ZeroIndex inbox)
+- Marketing site swap (2026-05-18, commit `045b62f` in zeroindexai): Contact CTA on zeroindex.ai now points to `https://intake.zeroindex.ai` instead of `mailto:hello@zeroindex.ai`; copy-email button retained as fallback
+- Favicon wiring (2026-05-18): 5 `<link>` tags added to `app/layout.tsx` matching the canonical ZeroIndex pattern (same `[Z]` mark as all other properties — there's no per-service variant by convention)
 
 ### Next (real follow-ups)
 
-1. **Marketing site swap.** In `zeroindexai/index.html` (~line 955), change the Contact CTA `mailto:` button into a link to `https://intake.zeroindex.ai`. Keep the copy-email affordance as a fallback. One-line edit, no surrounding sweep ([[feedback_typography_surgical]]).
-2. **Real favicon brand pass.** Currently borrowing trace-pack's favicon set. Generate intake-zero's own 5-file set (per [[feedback_favicon_real_files_for_new_sites]]) and replace.
-3. **Visible workflow timing fix.** Run page polls every 1.5s — the `notifying` step often resolves in <1s, so users may see the transition flash. Consider a min-duration-per-step display or switch to WDK readable-stream-based updates.
+1. **Visible workflow timing fix.** Run page polls every 1.5s — the `notifying` step often resolves in <1s, so users may see the transition flash. Consider a min-duration-per-step display or switch to WDK readable-stream-based updates.
+2. **Org-wide favicon.ico upgrade** (cross-cutting, not intake-zero-specific). All ZeroIndex properties currently ship a favicon.ico with 16/16/32/32 frames (duplicate sizes); the canonical pattern per [[feedback_favicon_real_files_for_new_sites]] is 16/32/48/64. Regenerate once, copy to all 4 properties (zeroindexai, ask-zeroindex, trace-pack, intake-zero, evals-site).
 
 ### Deferred (v0.2+)
 
