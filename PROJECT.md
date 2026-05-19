@@ -1,6 +1,6 @@
 # intake-zero — Project Documentation
 
-> **Status: live at [intake.zeroindex.ai](https://intake.zeroindex.ai).** Full pipeline (persist → enrich → classify → draft → notify owner → ack prospect) verified end-to-end against production Anthropic + Resend in 19s. Not yet wired to the marketing site. Resend domain not yet verified — `FROM_EMAIL=onboarding@resend.dev` for now, which means owner-notify + prospect-ack only succeed when the recipient matches the Resend account email.
+> **Status: live at [intake.zeroindex.ai](https://intake.zeroindex.ai).** Full pipeline (persist → enrich → classify → draft → notify owner → ack prospect) verified end-to-end against production Anthropic + Resend. Resend domain `zeroindex.ai` is verified — `FROM_EMAIL=intake@zeroindex.ai`, delivers to any recipient. Not yet wired to the marketing site.
 
 This document captures the scope, strategic decisions, architecture, and ordered work for `intake-zero` — the Claude-backed prospect intake that will replace the static `mailto:` Contact CTA on `zeroindex.ai`.
 
@@ -170,14 +170,14 @@ What's done, what's next. Ordered, not calendared.
 - Turso DB `intake-zero` provisioned (aws-us-east-1), creds stored in 1Password
 - Vercel project linked to the LLC team, 8 prod env vars set (Turso non-Sensitive for pulls, rest Sensitive)
 - First prod deploy at `intake-zero.vercel.app`, custom domain at `intake.zeroindex.ai`
-- Live e2e: full pipeline reaches `sent` in 19s; row contains correct classification + populated draft
+- Live e2e: full pipeline reaches `sent` in 14–19s; row contains correct classification + populated draft
+- Resend domain `zeroindex.ai` (apex) verified 2026-05-18; DKIM at `resend._domainkey`, SPF+MX at `send` subdomain (Resend's SES bounce-domain pattern keeps apex SPF untouched); `FROM_EMAIL` swapped to `intake@zeroindex.ai`; cross-address delivery confirmed (prospect-ack to Outlook, owner-notify to ZeroIndex inbox)
 
 ### Next (real follow-ups)
 
-1. **Resend domain verification.** Add the Resend DKIM/SPF records to Cloudflare for `zeroindex.ai`. Once verified, swap `FROM_EMAIL` in Vercel env from `onboarding@resend.dev` → `intake@zeroindex.ai`. Until that happens, prospect-ack only delivers to the Resend-account email; real-prospect emails will silently fail at the ack step.
-2. **Marketing site swap.** In `zeroindexai/index.html` (~line 955), change the Contact CTA `mailto:` button into a link to `https://intake.zeroindex.ai`. Keep the copy-email affordance as a fallback. One-line edit, no surrounding sweep ([[feedback_typography_surgical]]).
-3. **Real favicon brand pass.** Currently borrowing trace-pack's favicon set. Generate intake-zero's own 5-file set (per [[feedback_favicon_real_files_for_new_sites]]) and replace.
-4. **Visible workflow timing fix.** Run page polls every 1.5s — the `notifying` step often resolves in <1s, so users may see the transition flash. Consider a min-duration-per-step display or switch to WDK readable-stream-based updates.
+1. **Marketing site swap.** In `zeroindexai/index.html` (~line 955), change the Contact CTA `mailto:` button into a link to `https://intake.zeroindex.ai`. Keep the copy-email affordance as a fallback. One-line edit, no surrounding sweep ([[feedback_typography_surgical]]).
+2. **Real favicon brand pass.** Currently borrowing trace-pack's favicon set. Generate intake-zero's own 5-file set (per [[feedback_favicon_real_files_for_new_sites]]) and replace.
+3. **Visible workflow timing fix.** Run page polls every 1.5s — the `notifying` step often resolves in <1s, so users may see the transition flash. Consider a min-duration-per-step display or switch to WDK readable-stream-based updates.
 
 ### Deferred (v0.2+)
 
