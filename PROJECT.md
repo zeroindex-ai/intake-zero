@@ -1,8 +1,8 @@
 # intake-zero — Project Documentation
 
-> **Status: live at [intake.zeroindex.ai](https://intake.zeroindex.ai).** Full pipeline (persist → enrich → classify → draft → notify owner → ack prospect) verified end-to-end against production Anthropic + Resend. Resend domain `zeroindex.ai` is verified — `FROM_EMAIL=intake@zeroindex.ai`, delivers to any recipient. Not yet wired to the marketing site.
+> **Status: live at [intake.zeroindex.ai](https://intake.zeroindex.ai).** Full pipeline (persist → enrich → classify → draft → notify owner → ack prospect) verified end-to-end against production Anthropic + Resend. Resend domain `zeroindex.ai` is verified — `FROM_EMAIL=intake@zeroindex.ai`, delivers to any recipient. Wired to the Contact CTA on `zeroindex.ai`.
 
-This document captures the scope, strategic decisions, architecture, and ordered work for `intake-zero` — the Claude-backed prospect intake that will replace the static `mailto:` Contact CTA on `zeroindex.ai`.
+This document captures the scope, strategic decisions, architecture, and ordered work for `intake-zero` — the Claude-backed prospect intake behind the Contact CTA on `zeroindex.ai`.
 
 ---
 
@@ -16,11 +16,11 @@ The prospect sees a public `/runs/[id]` page that streams the pipeline status. T
 
 ### Why this project
 
-Three reasons, in order of weight:
+Three benefits, in order of weight:
 
-1. **The marketing site needs a working app.** The current Contact section is a `mailto:` button. Replacing it with a real intake — that classifies, drafts a response, and tells the prospect what happened — is a more credible artifact for a consultancy than "send an email and wait."
-2. **Vercel Workflow DevKit is the user's next learning target.** intake-zero is a small, real-world reason to learn WDK rather than a synthetic demo. The pipeline shape (fetch → classify → draft → send) is exactly what WDK is for.
-3. **The pipeline output makes triage faster.** The classification + draft reply land in the owner's inbox next to the raw submission, so deciding-and-responding takes minutes instead of being deferred to "later."
+1. **Submissions stop falling into a black hole.** A `mailto:` link gives the sender no confirmation and no visibility. The intake form returns a `submissionId`, shows the prospect a live pipeline timeline, and acknowledges receipt by email — they know it landed and roughly when to expect a reply.
+2. **Triage lands ready to act on.** Classification + draft reply arrive in the owner's inbox next to the raw submission, so deciding-and-responding takes minutes instead of being deferred to "later."
+3. **The pipeline is crash-safe.** Durable orchestration means a redeploy, a tab close, or a transient API failure mid-run doesn't drop the submission or repeat side effects — every step is checkpointed and retried under explicit retry/fatal rules.
 
 ### Goals & success criteria for v0.1
 
@@ -30,7 +30,7 @@ Three reasons, in order of weight:
 | Durable pipeline runs to completion                   | >95% of submissions reach `status: sent` without manual intervention                                | ⏳     |
 | Owner sees triage draft within 30s of submission      | Median time from submit → owner-notify email = ≤30s                                                 | ⏳     |
 | Prospect sees the WDK pipeline live                   | `/runs/[id]` renders 6-step timeline; page reload mid-run resumes display from current step         | ⏳     |
-| Marketing site swap is clean                          | `zeroindexai/index.html` Contact CTA links to `intake.zeroindex.ai`; copy-email fallback remains    | ⏳     |
+| Marketing site swap is clean                          | `zeroindexai/index.html` Contact CTA links to `intake.zeroindex.ai`; copy-email fallback remains    | ✅     |
 | Admin view is usable on phone                         | `/admin` table renders + paginates from a single-handed mobile view                                 | ⏳     |
 
 ### Out of scope (for v0.1)
@@ -84,7 +84,7 @@ Three reasons, in order of weight:
 | **Idempotent ingest**          | `sha256(email + problem)` dedupe with a 24h window                                                                  | Same prospect double-submitting the same message gets the same `submissionId`. Same prospect submitting a new message starts a new run. Mirrors the timing-safe-auth + idempotent-ingest default from the trace-pack deploy. |
 | **Error boundaries**           | Bad-input → `FatalError` (no retry); transient API failures → `RetryableError` (WDK retries with backoff)           | Per WDK docs. Eliminates the "stuck workflow" failure mode for genuinely transient outages.                                                                                                          |
 | **Enrichment failure mode**    | If URL fetch fails, fall through with un-enriched result (`fetched: false`) rather than failing the run             | A broken consumer URL shouldn't block triage. The classification step receives empty signals; the draft still goes out.                                                                              |
-| **Run page is unauthenticated** | `submissionId` is the random URL token; anyone with the link can see status (not content)                          | Simplest path to demoing WDK off. No PII is rendered on the run page — only the prospect's first name. Defer email-match auth until there's a reason.                                                |
+| **Run page is unauthenticated** | `submissionId` is the random URL token; anyone with the link can see status (not content)                          | Simplest path to a public status page anyone can watch. No PII is rendered on the run page — only the prospect's first name. Defer email-match auth until there's a reason.                          |
 | **Marketing site change**      | One-line edit: `mailto:` button → `Start intake →` link; copy-email fallback stays                                  | Smallest possible surface area on the marketing side. The marketing site stays static HTML on Cloudflare; intake-zero is a separate app.                                                             |
 
 ---
@@ -119,7 +119,7 @@ Three reasons, in order of weight:
 │       enrich                  fetch URL + signals                       │
 │       classify                Haiku → engagementType/fitScore           │
 │       draft-triage            Sonnet → reply draft                      │
-│       notify-owner            Resend → abhishek25@outlook.com           │
+│       notify-owner            Resend → OWNER_EMAIL                       │
 │       ack-prospect            Resend → prospect; mark sent              │
 │                                                                          │
 │   /.well-known/workflow/*     WDK runtime (mounted by withWorkflow)     │
