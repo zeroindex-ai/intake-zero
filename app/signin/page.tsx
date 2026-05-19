@@ -1,6 +1,6 @@
 export default function SigninPage() {
   return (
-    <main className="min-h-screen flex items-center justify-center px-6">
+    <section className="pt-10 pb-24 flex justify-center">
       <form
         method="post"
         action="/api/admin/signin"
@@ -30,6 +30,6 @@ export default function SigninPage() {
           Continue
         </button>
       </form>
-    </main>
+    </section>
   );
 }

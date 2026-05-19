@@ -68,7 +68,7 @@ export function IntakeForm() {
     <form
       onSubmit={onSubmit}
       style={{ background: 'var(--card)', color: 'var(--card-ink)' }}
-      className="rounded-2xl p-8 md:p-10 max-w-2xl w-full"
+      className="rounded-2xl p-8 md:p-10 max-w-3xl w-full"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>

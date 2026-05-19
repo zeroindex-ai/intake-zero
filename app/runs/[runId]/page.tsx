@@ -16,26 +16,24 @@ export default async function RunPage({ params }: { params: Promise<{ runId: str
   if (!row) notFound();
 
   return (
-    <main className="min-h-screen">
-      <div className="max-w-3xl mx-auto px-6 md:px-10 py-16">
-        <div className="label mb-3">ZeroIndex · Intake received</div>
-        <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight">
-          Thanks, {row.name.split(' ')[0]}.
-        </h1>
-        <p className="mt-6 muted text-lg max-w-xl">
-          Your note is in. The pipeline below runs whether you stay on this page or not &mdash;
-          reload, close the tab, come back tomorrow. The state survives.
-        </p>
+    <section className="pt-10 pb-24 max-w-3xl">
+      <div className="label mb-3">Intake received</div>
+      <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight">
+        Thanks, {row.name.split(' ')[0]}.
+      </h1>
+      <p className="mt-6 muted text-lg max-w-xl">
+        Your note is in. The pipeline below runs whether you stay on this page or not &mdash;
+        reload, close the tab, come back tomorrow. The state survives.
+      </p>
 
-        <div className="mt-10">
-          <RunTimeline submissionId={row.id} initialStatus={row.status} />
-        </div>
-
-        <p className="mt-12 muted-2 text-sm">
-          You&rsquo;ll get a confirmation email at <strong>{row.email}</strong> when this finishes.
-          My reply lands separately, usually within a business day.
-        </p>
+      <div className="mt-10">
+        <RunTimeline submissionId={row.id} initialStatus={row.status} />
       </div>
-    </main>
+
+      <p className="mt-12 muted-2 text-sm">
+        You&rsquo;ll get a confirmation email at <strong>{row.email}</strong> when this finishes. My
+        reply lands separately, usually within a business day.
+      </p>
+    </section>
   );
 }
