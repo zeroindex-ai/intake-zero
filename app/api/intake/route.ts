@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createHash, randomUUID } from 'node:crypto';
 import { and, eq, gt } from 'drizzle-orm';
 import { db, schema } from '@/db/client';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { start } from 'workflow/api';
 import { intakeWorkflow } from '@/workflow/intake';
 
@@ -19,14 +20,57 @@ const Body = z.object({
 });
 
 const DEDUPE_WINDOW_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+
+// Per-IP cap protects the founder's inbox and the LLM/email budget from a
+// single source; per-email cap stops one prospect from flooding regardless of
+// source IP. The 24h dedupe hash is NOT a rate limit — it only collapses
+// identical resubmissions, and is trivially defeated by varying one character.
+const IP_LIMIT = 10;
+const EMAIL_LIMIT = 5;
+
+function clientIp(req: Request): string {
+  const fwd = req.headers.get('x-forwarded-for');
+  if (fwd) return fwd.split(',')[0]!.trim();
+  return req.headers.get('x-real-ip')?.trim() || 'unknown';
+}
+
+function hash(value: string): string {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+function rateLimited(retryAfterSec: number): NextResponse {
+  return NextResponse.json(
+    { error: 'rate limited' },
+    { status: 429, headers: { 'retry-after': String(retryAfterSec) } },
+  );
+}
 
 export async function POST(req: Request) {
+  // Per-IP cap first (hashed — no raw IP is persisted), before any body work.
+  const ipLimit = await checkRateLimit({
+    scope: 'intake-ip',
+    identifier: hash(clientIp(req)),
+    limit: IP_LIMIT,
+    windowMs: HOUR_MS,
+  });
+  if (!ipLimit.ok) return rateLimited(ipLimit.retryAfterSec);
+
   let body: z.infer<typeof Body>;
   try {
     body = Body.parse(await req.json());
   } catch (err) {
-    return NextResponse.json({ error: 'invalid body', detail: String(err) }, { status: 400 });
+    console.error('intake: invalid body', err);
+    return NextResponse.json({ error: 'invalid body' }, { status: 400 });
   }
+
+  const emailLimit = await checkRateLimit({
+    scope: 'intake-email',
+    identifier: hash(body.email.toLowerCase().trim()),
+    limit: EMAIL_LIMIT,
+    windowMs: HOUR_MS,
+  });
+  if (!emailLimit.ok) return rateLimited(emailLimit.retryAfterSec);
 
   const dedupeHash = createHash('sha256')
     .update(body.email.toLowerCase().trim())
@@ -38,7 +82,9 @@ export async function POST(req: Request) {
   const existing = await db
     .select()
     .from(schema.submissions)
-    .where(and(eq(schema.submissions.dedupeHash, dedupeHash), gt(schema.submissions.createdAt, cutoff)))
+    .where(
+      and(eq(schema.submissions.dedupeHash, dedupeHash), gt(schema.submissions.createdAt, cutoff)),
+    )
     .limit(1);
 
   if (existing[0]) {

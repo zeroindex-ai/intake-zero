@@ -3,6 +3,7 @@
 import { eq } from 'drizzle-orm';
 import { db, schema } from '@/db/client';
 import type { EnrichmentResult } from '@/db/schema';
+import { safeFetch } from '@/lib/safe-fetch';
 import { RetryableError } from 'workflow';
 
 type EnrichInput = {
@@ -18,9 +19,12 @@ export async function enrichCompany(input: EnrichInput): Promise<EnrichmentResul
 
   if (input.url) {
     try {
-      const res = await fetch(input.url, {
+      // safeFetch validates the URL (and every redirect hop) against an
+      // SSRF allow rule before connecting — a user-supplied URL must never be
+      // able to reach loopback, private, or cloud-metadata addresses.
+      const res = await safeFetch(input.url, {
         headers: { 'user-agent': 'intake-zero/0.1 (+https://intake.zeroindex.ai)' },
-        signal: AbortSignal.timeout(8_000),
+        timeoutMs: 8_000,
       });
       if (!res.ok) {
         if (res.status >= 500) throw new RetryableError(`upstream ${res.status}`);
@@ -34,7 +38,8 @@ export async function enrichCompany(input: EnrichInput): Promise<EnrichmentResul
       }
     } catch (err) {
       if (err instanceof RetryableError) throw err;
-      // Non-retryable network/parse error — fall through with un-enriched result.
+      // SSRF-blocked, invalid, or transient network/parse error — fall through
+      // with an un-enriched result rather than failing the whole run.
     }
   }
 

@@ -14,7 +14,10 @@ export const submissions = sqliteTable('submissions', {
   company: text('company'),
   role: text('role'),
   problem: text('problem').notNull(),
-  stack: text('stack', { mode: 'json' }).$type<string[]>().notNull().default(sql`'[]'`),
+  stack: text('stack', { mode: 'json' })
+    .$type<string[]>()
+    .notNull()
+    .default(sql`'[]'`),
   timeline: text('timeline'),
   budget: text('budget'),
   url: text('url'),
@@ -32,6 +35,14 @@ export const submissions = sqliteTable('submissions', {
   updatedAt: integer('updated_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
+});
+
+// Fixed-window rate-limit counters. One row per (scope:identifier:window-start);
+// `count` is incremented per request and the row expires after the window.
+export const rateLimits = sqliteTable('rate_limits', {
+  bucket: text('bucket').primaryKey(),
+  count: integer('count').notNull().default(0),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
 });
 
 export type Submission = typeof submissions.$inferSelect;

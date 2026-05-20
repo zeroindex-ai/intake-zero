@@ -256,8 +256,6 @@ export function IntakeForm() {
         </div>
       </div>
 
-
-
       {error ? (
         <div style={{ color: 'var(--error)' }} className="mb-4 text-sm">
           {error}
