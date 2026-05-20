@@ -89,4 +89,20 @@ describe('POST /api/intake', () => {
     expect(insertValues).toHaveBeenCalledTimes(1);
     expect(start).toHaveBeenCalledTimes(1);
   });
+
+  it('rejects an oversized body with 413 before buffering it', async () => {
+    const res = await POST(post('x'.repeat(40_000)));
+    expect(res.status).toBe(413);
+    expect(start).not.toHaveBeenCalled();
+    expect(insertValues).not.toHaveBeenCalled();
+  });
+
+  it('marks the row failed and returns 500 if the workflow cannot start', async () => {
+    start.mockRejectedValue(new Error('wdk infra down'));
+    const res = await POST(post(valid));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'could not start processing' });
+    expect(insertValues).toHaveBeenCalledTimes(1);
+    expect(updateWhere).toHaveBeenCalled(); // the mark-failed update ran
+  });
 });

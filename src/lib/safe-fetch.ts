@@ -1,5 +1,8 @@
-import { isIP } from 'node:net';
+import { isIP, type LookupFunction } from 'node:net';
 import { lookup } from 'node:dns/promises';
+import { Agent } from 'undici';
+
+export type ResolvedAddress = { address: string; family: number };
 
 // Blocked IPv4 CIDR ranges: loopback, private, link-local (incl. the cloud
 // metadata host 169.254.169.254), CGNAT, multicast, and reserved space.
@@ -119,8 +122,11 @@ export function isPublicAddress(ip: string): boolean {
 }
 
 // Resolve a hostname and require every returned address to be public. Returns
-// the validated URL or throws. Rejects non-http(s) schemes outright.
-export async function assertPublicUrl(raw: string): Promise<URL> {
+// the validated URL together with the resolved addresses (so the caller can
+// connect to exactly those — see safeFetch). Rejects non-http(s) schemes.
+export async function assertPublicUrl(
+  raw: string,
+): Promise<{ url: URL; addresses: ResolvedAddress[] }> {
   let url: URL;
   try {
     url = new URL(raw);
@@ -134,7 +140,7 @@ export async function assertPublicUrl(raw: string): Promise<URL> {
   const host = url.hostname;
   if (isIP(host)) {
     if (!isPublicAddress(host)) throw new Error('blocked: non-public IP literal');
-    return url;
+    return { url, addresses: [{ address: host, family: isIP(host) }] };
   }
 
   const addrs = await lookup(host, { all: true });
@@ -143,7 +149,27 @@ export async function assertPublicUrl(raw: string): Promise<URL> {
     if (!isPublicAddress(address))
       throw new Error(`blocked: ${host} resolves to non-public ${address}`);
   }
-  return url;
+  return { url, addresses: addrs.map((a) => ({ address: a.address, family: a.family })) };
+}
+
+// A dns.lookup replacement that always returns the pre-validated addresses,
+// ignoring the hostname. Pinning the connection to these exact addresses closes
+// the DNS-rebinding TOCTOU: without it, fetch would re-resolve the hostname and
+// could connect to an internal IP that appeared public microseconds earlier.
+export function pinnedLookup(addresses: ResolvedAddress[]): LookupFunction {
+  return ((_hostname, options, callback) => {
+    const all =
+      typeof options === 'object' && options !== null && (options as { all?: boolean }).all;
+    if (all) {
+      (callback as unknown as (e: NodeJS.ErrnoException | null, a: ResolvedAddress[]) => void)(
+        null,
+        addresses,
+      );
+    } else {
+      const first = addresses[0]!;
+      callback(null, first.address, first.family);
+    }
+  }) as LookupFunction;
 }
 
 type SafeFetchOptions = {
@@ -152,24 +178,29 @@ type SafeFetchOptions = {
   maxRedirects?: number;
 };
 
-// Fetch a user-supplied URL with SSRF protection. Redirects are followed
-// manually so every hop is re-validated against the public-address allow rule
-// (automatic redirect following would let a public URL bounce to an internal IP).
+// Fetch a user-supplied URL with SSRF protection. Each hop is validated, and
+// the TCP connection is pinned to the validated IP (the Host header and TLS SNI
+// remain the hostname, so HTTPS still verifies). Redirects are followed manually
+// so every hop is re-validated and re-pinned — neither a redirect nor a DNS
+// rebind can bounce the connection to an internal address.
 export async function safeFetch(raw: string, opts: SafeFetchOptions = {}): Promise<Response> {
   const { headers, timeoutMs = 8_000, maxRedirects = 3 } = opts;
   let current = raw;
 
   for (let hop = 0; hop <= maxRedirects; hop++) {
-    const url = await assertPublicUrl(current);
+    const { url, addresses } = await assertPublicUrl(current);
+    const dispatcher = new Agent({ connect: { lookup: pinnedLookup(addresses) } });
     const res = await fetch(url, {
       headers,
       redirect: 'manual',
       signal: AbortSignal.timeout(timeoutMs),
-    });
+      dispatcher,
+    } as RequestInit);
 
     if (res.status >= 300 && res.status < 400) {
       const location = res.headers.get('location');
       if (!location) return res;
+      await dispatcher.close();
       current = new URL(location, url).toString();
       continue;
     }

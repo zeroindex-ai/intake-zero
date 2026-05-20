@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { isPublicAddress, assertPublicUrl } from './safe-fetch';
+import { describe, it, expect, vi } from 'vitest';
+import { isPublicAddress, assertPublicUrl, pinnedLookup } from './safe-fetch';
 
 describe('isPublicAddress', () => {
   it('accepts ordinary public IPv4', () => {
@@ -67,5 +67,33 @@ describe('assertPublicUrl', () => {
 
   it('rejects malformed URLs', async () => {
     await expect(assertPublicUrl('not a url')).rejects.toThrow(/invalid url/);
+  });
+
+  it('returns the validated address for a public IP literal (no DNS lookup)', async () => {
+    const out = await assertPublicUrl('https://1.1.1.1/path');
+    expect(out.url.hostname).toBe('1.1.1.1');
+    expect(out.addresses).toEqual([{ address: '1.1.1.1', family: 4 }]);
+  });
+});
+
+describe('pinnedLookup', () => {
+  // The connection must resolve to the pre-validated address regardless of what
+  // the hostname would now resolve to — this is what defeats DNS rebinding.
+  const call = (fn: ReturnType<typeof pinnedLookup>, options: unknown) => {
+    const cb = vi.fn();
+    (fn as (h: string, o: unknown, c: unknown) => void)('rebind.attacker.test', options, cb);
+    return cb;
+  };
+
+  it('returns every validated address in all:true mode, ignoring the hostname', () => {
+    const fn = pinnedLookup([{ address: '93.184.216.34', family: 4 }]);
+    expect(call(fn, { all: true })).toHaveBeenCalledWith(null, [
+      { address: '93.184.216.34', family: 4 },
+    ]);
+  });
+
+  it('returns the first address in single-lookup mode', () => {
+    const fn = pinnedLookup([{ address: '93.184.216.34', family: 4 }]);
+    expect(call(fn, {})).toHaveBeenCalledWith(null, '93.184.216.34', 4);
   });
 });

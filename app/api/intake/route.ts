@@ -22,6 +22,9 @@ const Body = z.object({
 
 const DEDUPE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
+// The form payload is tiny (problem caps at 8k chars); anything larger is abuse.
+// Cap before buffering so a huge body can't be read into memory pre-auth.
+const MAX_BODY_BYTES = 32 * 1024;
 
 // Per-IP cap protects the founder's inbox and the LLM/email budget from a
 // single source; per-email cap stops one prospect from flooding regardless of
@@ -57,9 +60,18 @@ export async function POST(req: Request) {
   // doesn't grow unbounded; a cheap DELETE at this volume.
   if (Math.random() < 0.02) await sweepExpiredRateLimits();
 
+  const declared = Number(req.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: 'payload too large' }, { status: 413 });
+  }
+
   let body: z.infer<typeof Body>;
   try {
-    body = Body.parse(await req.json());
+    const raw = await req.text();
+    if (Buffer.byteLength(raw) > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: 'payload too large' }, { status: 413 });
+    }
+    body = Body.parse(JSON.parse(raw));
   } catch (err) {
     console.error('intake: invalid body', err);
     return NextResponse.json({ error: 'invalid body' }, { status: 400 });
@@ -108,7 +120,21 @@ export async function POST(req: Request) {
     status: 'received',
   });
 
-  const run = await start(intakeWorkflow, [{ submissionId: id }]);
+  let run: Awaited<ReturnType<typeof start>>;
+  try {
+    run = await start(intakeWorkflow, [{ submissionId: id }]);
+  } catch (err) {
+    // If the workflow never starts, the row would otherwise strand at
+    // 'received' forever (the orchestrator's markFailed never runs). Mark it
+    // failed here so it surfaces as a failure rather than a silent stall.
+    console.error('intake: workflow start failed', err);
+    await db
+      .update(schema.submissions)
+      .set({ status: 'failed', failedAtStep: 'received', updatedAt: new Date() })
+      .where(eq(schema.submissions.id, id));
+    return NextResponse.json({ error: 'could not start processing' }, { status: 500 });
+  }
+
   await db
     .update(schema.submissions)
     .set({ runId: run.runId, updatedAt: new Date() })
