@@ -98,6 +98,21 @@ body {
   border-color: var(--line-strong);
   box-shadow: 0 6px 22px -16px rgba(124, 58, 237, 0.35);
 }
+/* table cards are a rounded clipping frame; the inner wrapper scrolls.
+   keeping the scrollbar off the card lets its rounded corners survive. */
+.card:has(.admin-table) {
+  padding: 0;
+  overflow: hidden;
+}
+/* cap the grid height (sticky header + ~10 rows) and give it its own scrollbar.
+   no top padding so the sticky header pins flush — nothing scrolls above it.
+   rows here are two-line (name + company), ~56px each, so this is taller than
+   trace-pack's single-line grid: ~40px header/padding + 10 × 56px. */
+.table-scroll {
+  max-height: 615px;
+  overflow-y: auto;
+  padding: 0 24px 8px;
+}
 
 /* admin tables — dense, monospace, white-card-on-cream */
 .admin-table {
@@ -115,6 +130,10 @@ body {
   color: var(--muted-2);
   padding: 8px 12px 8px 0;
   border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #ffffff;
 }
 .admin-table tbody td {
   padding: 10px 12px 10px 0;
@@ -124,13 +143,23 @@ body {
 .admin-table tbody tr:last-child td {
   border-bottom: none;
 }
-.admin-table tbody tr:hover {
+/* rows with a row-link are clickable anywhere — stretch the link over the row */
+.admin-table tbody tr:has(a.row-link):hover {
   background: var(--bg-soft);
+}
+.admin-table tbody tr:has(a.row-link) {
+  position: relative;
+  cursor: pointer;
 }
 .admin-table a.row-link {
   display: block;
   text-decoration: none;
   color: inherit;
+}
+.admin-table a.row-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
 }
 .admin-table .ts,
 .admin-table .num-cell {

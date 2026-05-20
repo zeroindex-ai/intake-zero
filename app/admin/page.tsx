@@ -29,39 +29,39 @@ export default async function AdminIndex() {
           {rows.length === 0 ? (
             <div className="empty-state">No submissions yet.</div>
           ) : (
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>When</th>
-                  <th>Who</th>
-                  <th>Type</th>
-                  <th>Fit</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id}>
-                    <td className="ts">
-                      <Link href={`/admin/${r.id}`} className="row-link">
-                        {new Date(r.createdAt).toISOString().slice(0, 16).replace('T', ' ')}
-                      </Link>
-                    </td>
-                    <td>
-                      <Link href={`/admin/${r.id}`} className="row-link font-medium">
-                        {r.name}
-                      </Link>
-                      <div className="muted-2 text-xs">{r.company ?? '—'}</div>
-                    </td>
-                    <td className="num-cell">{r.classification?.engagementType ?? '—'}</td>
-                    <td className="num-cell">
-                      {r.classification ? `${r.classification.fitScore}/5` : '—'}
-                    </td>
-                    <td className="num-cell">{r.status}</td>
+            <div className="table-scroll">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>When</th>
+                    <th>Who</th>
+                    <th>Type</th>
+                    <th>Fit</th>
+                    <th>Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id}>
+                      <td className="ts">
+                        <Link href={`/admin/${r.id}`} className="row-link">
+                          {new Date(r.createdAt).toISOString().slice(0, 16).replace('T', ' ')}
+                        </Link>
+                      </td>
+                      <td>
+                        <span className="font-medium">{r.name}</span>
+                        <div className="muted-2 text-xs">{r.company ?? '—'}</div>
+                      </td>
+                      <td className="num-cell">{r.classification?.engagementType ?? '—'}</td>
+                      <td className="num-cell">
+                        {r.classification ? `${r.classification.fitScore}/5` : '—'}
+                      </td>
+                      <td className="num-cell">{r.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </section>
