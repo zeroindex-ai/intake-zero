@@ -19,13 +19,15 @@ describe('parseClassification', () => {
   });
 
   it('parses JSON wrapped in a ```json fence', () => {
-    const raw = '```json\n{"engagementType":"advisory","fitScore":3,"rationale":"ok","suggestedCaseStudies":[]}\n```';
+    const raw =
+      '```json\n{"engagementType":"advisory","fitScore":3,"rationale":"ok","suggestedCaseStudies":[]}\n```';
     expect(parseClassification(raw).engagementType).toBe('advisory');
     expect(parseClassification(raw).fitScore).toBe(3);
   });
 
   it('parses JSON wrapped in a bare ``` fence', () => {
-    const raw = '```\n{"engagementType":"audit","fitScore":2,"rationale":"x","suggestedCaseStudies":[]}\n```';
+    const raw =
+      '```\n{"engagementType":"audit","fitScore":2,"rationale":"x","suggestedCaseStudies":[]}\n```';
     expect(parseClassification(raw).engagementType).toBe('audit');
   });
 
@@ -104,6 +106,14 @@ describe('parseClassification', () => {
   it('throws FatalError on totally non-JSON garbage', () => {
     expect(() => parseClassification('this is just prose, no json at all')).toThrow(
       /classifier did not return JSON/,
+    );
+  });
+
+  it('throws FatalError (not a raw SyntaxError) on brace-wrapped malformed JSON', () => {
+    // a "{...}" substring that still isn't valid JSON must be Fatal, not
+    // retryable — otherwise WDK retries a deterministic-failure step.
+    expect(() => parseClassification('Here you go: {engagementType: build, fitScore: 4,}')).toThrow(
+      /classifier did not return parseable JSON/,
     );
   });
 

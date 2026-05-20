@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { createHash, randomUUID } from 'node:crypto';
 import { and, eq, gt } from 'drizzle-orm';
 import { db, schema } from '@/db/client';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { checkRateLimit, sweepExpiredRateLimits } from '@/lib/rate-limit';
+import { clientIp } from '@/lib/request-ip';
 import { start } from 'workflow/api';
 import { intakeWorkflow } from '@/workflow/intake';
 
@@ -24,16 +25,12 @@ const HOUR_MS = 60 * 60 * 1000;
 
 // Per-IP cap protects the founder's inbox and the LLM/email budget from a
 // single source; per-email cap stops one prospect from flooding regardless of
-// source IP. The 24h dedupe hash is NOT a rate limit — it only collapses
-// identical resubmissions, and is trivially defeated by varying one character.
+// source IP. The IP comes from the platform-trusted x-real-ip (see clientIp),
+// not a caller-spoofable x-forwarded-for hop. The 24h dedupe hash is NOT a rate
+// limit — it only collapses identical resubmissions and is trivially defeated
+// by varying one character.
 const IP_LIMIT = 10;
 const EMAIL_LIMIT = 5;
-
-function clientIp(req: Request): string {
-  const fwd = req.headers.get('x-forwarded-for');
-  if (fwd) return fwd.split(',')[0]!.trim();
-  return req.headers.get('x-real-ip')?.trim() || 'unknown';
-}
 
 function hash(value: string): string {
   return createHash('sha256').update(value).digest('hex');
@@ -55,6 +52,10 @@ export async function POST(req: Request) {
     windowMs: HOUR_MS,
   });
   if (!ipLimit.ok) return rateLimited(ipLimit.retryAfterSec);
+
+  // Opportunistically prune expired buckets (~2% of requests) so rate_limits
+  // doesn't grow unbounded; a cheap DELETE at this volume.
+  if (Math.random() < 0.02) await sweepExpiredRateLimits();
 
   let body: z.infer<typeof Body>;
   try {

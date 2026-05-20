@@ -28,7 +28,15 @@ function extractJson(raw: string): Record<string, unknown> {
   } catch {
     const start = body.indexOf('{');
     const end = body.lastIndexOf('}');
-    if (start >= 0 && end > start) return JSON.parse(body.slice(start, end + 1));
+    if (start >= 0 && end > start) {
+      try {
+        return JSON.parse(body.slice(start, end + 1));
+      } catch {
+        // Brace-delimited substring still isn't valid JSON — this is bad model
+        // output, not a transient failure, so it must be Fatal (not retryable).
+        throw new FatalError('classifier did not return parseable JSON');
+      }
+    }
     throw new FatalError('classifier did not return JSON');
   }
 }
