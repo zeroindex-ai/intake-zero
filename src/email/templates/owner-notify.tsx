@@ -11,16 +11,30 @@ type Props = {
 
 export function OwnerNotify({ submission, enrichment, classification, triage, baseUrl }: Props) {
   return (
-    <div style={{ fontFamily: 'system-ui, -apple-system, sans-serif', color: '#18181b', maxWidth: 640 }}>
+    <div
+      style={{
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        color: '#18181b',
+        maxWidth: 640,
+      }}
+    >
       <h2 style={{ margin: '0 0 4px' }}>{submission.name}</h2>
       <div style={{ color: '#71717a', fontSize: 13, marginBottom: 16 }}>
         {submission.role ? `${submission.role} · ` : ''}
         {submission.company ?? '—'} · <a href={`mailto:${submission.email}`}>{submission.email}</a>
+        {submission.phone ? (
+          <>
+            {' · '}
+            <a href={`tel:${submission.phone}`}>{submission.phone}</a>
+          </>
+        ) : null}
       </div>
 
       <div style={{ background: '#f4f3ef', padding: 12, borderRadius: 8, marginBottom: 16 }}>
         <strong>{classification.engagementType}</strong> · fit {classification.fitScore}/5
-        <div style={{ color: '#52525b', fontSize: 14, marginTop: 4 }}>{classification.rationale}</div>
+        <div style={{ color: '#52525b', fontSize: 14, marginTop: 4 }}>
+          {classification.rationale}
+        </div>
         {classification.suggestedCaseStudies.length > 0 ? (
           <div style={{ fontSize: 13, marginTop: 8 }}>
             Suggested case studies: {classification.suggestedCaseStudies.join(', ')}
@@ -55,7 +69,9 @@ export function OwnerNotify({ submission, enrichment, classification, triage, ba
         <div>Timeline: {submission.timeline ?? '—'}</div>
         <div>Budget: {submission.budget ?? '—'}</div>
         {submission.url ? <div>URL: {submission.url}</div> : null}
-        {enrichment.fetched ? <div>Enrichment signals: {enrichment.signals.join(', ') || '—'}</div> : null}
+        {enrichment.fetched ? (
+          <div>Enrichment signals: {enrichment.signals.join(', ') || '—'}</div>
+        ) : null}
         <div style={{ marginTop: 12 }}>
           <a href={`${baseUrl}/admin/${submission.id}`}>Open in admin →</a>
         </div>

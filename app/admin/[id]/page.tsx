@@ -30,6 +30,14 @@ export default async function AdminDetail({ params }: { params: Promise<{ id: st
           <a href={`mailto:${row.email}`} className="inline-link">
             {row.email}
           </a>
+          {row.phone ? (
+            <>
+              {' · '}
+              <a href={`tel:${row.phone}`} className="inline-link">
+                {row.phone}
+              </a>
+            </>
+          ) : null}
         </div>
       </section>
 

@@ -30,6 +30,7 @@ export function IntakeForm() {
       email: String(form.get('email') ?? ''),
       company: String(form.get('company') ?? ''),
       role: String(form.get('role') ?? ''),
+      phone: String(form.get('phone') ?? ''),
       problem: String(form.get('problem') ?? ''),
       url: String(form.get('url') ?? ''),
       stack,
@@ -95,11 +96,26 @@ export function IntakeForm() {
         </div>
       </div>
 
-      <div className="mb-4">
-        <label htmlFor="url" className="field-label">
-          Company URL
-        </label>
-        <input id="url" name="url" type="url" placeholder="https://" className="field-input" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label htmlFor="phone" className="field-label">
+            Phone
+          </label>
+          <input
+            id="phone"
+            name="phone"
+            type="tel"
+            autoComplete="tel"
+            placeholder="Include country code if outside the US"
+            className="field-input"
+          />
+        </div>
+        <div>
+          <label htmlFor="url" className="field-label">
+            Company URL
+          </label>
+          <input id="url" name="url" type="url" placeholder="https://" className="field-input" />
+        </div>
       </div>
 
       <div className="mb-4">

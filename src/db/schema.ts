@@ -13,6 +13,7 @@ export const submissions = sqliteTable('submissions', {
   name: text('name').notNull(),
   company: text('company'),
   role: text('role'),
+  phone: text('phone'),
   problem: text('problem').notNull(),
   stack: text('stack', { mode: 'json' })
     .$type<string[]>()
