@@ -189,22 +189,33 @@ export async function safeFetch(raw: string, opts: SafeFetchOptions = {}): Promi
 
   for (let hop = 0; hop <= maxRedirects; hop++) {
     const { url, addresses } = await assertPublicUrl(current);
+    // One dispatcher per hop, pinned to the validated IP. It's always closed in
+    // the finally — for the final hop we buffer the body first so the returned
+    // Response outlives the dispatcher and no keep-alive socket leaks.
     const dispatcher = new Agent({ connect: { lookup: pinnedLookup(addresses) } });
-    const res = await fetch(url, {
-      headers,
-      redirect: 'manual',
-      signal: AbortSignal.timeout(timeoutMs),
-      dispatcher,
-    } as RequestInit);
+    try {
+      const res = await fetch(url, {
+        headers,
+        redirect: 'manual',
+        signal: AbortSignal.timeout(timeoutMs),
+        dispatcher,
+      } as RequestInit);
 
-    if (res.status >= 300 && res.status < 400) {
-      const location = res.headers.get('location');
-      if (!location) return res;
+      if (res.status >= 300 && res.status < 400) {
+        const location = res.headers.get('location');
+        if (location) {
+          current = new URL(location, url).toString();
+          continue;
+        }
+      }
+      return new Response(await res.arrayBuffer(), {
+        status: res.status,
+        statusText: res.statusText,
+        headers: res.headers,
+      });
+    } finally {
       await dispatcher.close();
-      current = new URL(location, url).toString();
-      continue;
     }
-    return res;
   }
   throw new Error('too many redirects');
 }

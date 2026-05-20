@@ -32,6 +32,7 @@ describe('ackProspect', () => {
     await ackProspect({ submissionId: 's1', submission });
     expect(send).toHaveBeenCalledWith(
       expect.objectContaining({ from: 'from@zeroindex.ai', to: 'dana@acme.com' }),
+      expect.objectContaining({ idempotencyKey: 'prospect-ack-s1' }),
     );
     expect(updateSet).toHaveBeenCalledWith(expect.objectContaining({ status: 'sent' }));
   });

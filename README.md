@@ -56,9 +56,12 @@ pnpm typecheck
 pnpm lint
 ```
 
-Playwright covers three critical paths only: form submit → run page reaches
-`sent`, required-field validation, and the `/admin` redirect gate. No visual
-regression, no cross-browser matrix.
+Playwright covers three critical paths only: form submit → durable run page,
+required-field validation, and the `/admin` redirect gate. These run in CI (the
+`e2e` job boots the app against a local SQLite file with dummy keys). The
+happy-path's terminal-state assertion (`sent`) needs live Anthropic/Resend, so
+it runs only locally with real keys — CI asserts the submission persisted and
+the run page rendered. No visual regression, no cross-browser matrix.
 
 ## Routes
 

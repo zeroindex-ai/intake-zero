@@ -30,3 +30,31 @@ jobs:
       # the build wraps `next.config.ts` with `withWorkflow`, which contacts
       # Vercel-side WDK infrastructure for build manifests. Vercel runs the
       # real build during deploy; CI sticks to source-level checks.
+
+  e2e:
+    runs-on: ubuntu-latest
+    # Boots the app against a local SQLite file with dummy LLM/email keys and
+    # runs the Playwright critical-path specs. The happy-path's terminal-state
+    # assertion is skipped under CI (no live Anthropic/Resend) — see the spec.
+    env:
+      TURSO_DATABASE_URL: 'file:local.db'
+      ANTHROPIC_API_KEY: 'sk-ant-ci-dummy-key'
+      RESEND_API_KEY: 're_ci_dummy_key'
+      FROM_EMAIL: 'ci@example.com'
+      OWNER_EMAIL: 'ci@example.com'
+      ADMIN_TOKEN: 'ci-dummy-admin-token-not-a-secret-padding'
+      PUBLIC_BASE_URL: 'http://localhost:3000'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm db:migrate:prod
+      - run: pnpm test:e2e

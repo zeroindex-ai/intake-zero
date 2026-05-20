@@ -20,7 +20,7 @@ Three benefits, in order of weight:
 
 1. **Submissions stop falling into a black hole.** A `mailto:` link gives the sender no confirmation and no visibility. The intake form returns a `submissionId`, shows the prospect a live pipeline timeline, and acknowledges receipt by email — they know it landed and roughly when to expect a reply.
 2. **Triage lands ready to act on.** Classification + draft reply arrive in the owner's inbox next to the raw submission, so deciding-and-responding takes minutes instead of being deferred to "later."
-3. **The pipeline is crash-safe.** Durable orchestration means a redeploy, a tab close, or a transient API failure mid-run doesn't drop the submission or repeat side effects — every step is checkpointed and retried under explicit retry/fatal rules.
+3. **The pipeline is crash-safe.** Durable orchestration means a redeploy, a tab close, or a transient API failure mid-run doesn't drop the submission or repeat side effects — every step is checkpointed and retried under explicit retry/fatal rules, and the two email sends carry Resend idempotency keys so a step retry can't double-send.
 
 ### Goals & success criteria for v0.1
 
@@ -178,6 +178,7 @@ What's done, what's next. Ordered, not calendared.
 - Favicon wiring (2026-05-18): 5 `<link>` tags added to `app/layout.tsx` matching the canonical ZeroIndex pattern (same `[Z]` mark as all other properties — there's no per-service variant by convention)
 - Public-surface hardening (2026-05-19): rate limiting on `POST /api/intake` (per-hashed-IP + per-hashed-email fixed windows, `rate_limits` table, migration `0002`), SSRF guard on enrichment (`src/lib/safe-fetch.ts`, per-redirect-hop validation), generic 400 (stopped echoing raw Zod errors), HMAC-derived admin cookie (raw secret no longer stored in the browser), prompt-injection notes in both LLM prompts
 - Vitest coverage for the workflow steps + guards (2026-05-19): `classify`, `draft-triage` (mocked Anthropic SDK + db: Retryable/Fatal mapping), `mark-failed` (status capture), `safe-fetch` (IP-range classification), `rate-limit`, `auth` (HMAC derivation)
+- Hardening round 2 (2026-05-19): SSRF guard pins the connection to the validated IP (closes the DNS-rebinding TOCTOU); 32 KB body cap on `POST /api/intake`; `start()` failure marks the row failed instead of stranding it; email steps carry Resend idempotency keys; the `safeFetch` dispatcher is closed on every path; Playwright specs wired into CI (the `e2e` job)
 
 ### Next (real follow-ups)
 

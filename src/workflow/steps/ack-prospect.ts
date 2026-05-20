@@ -15,14 +15,21 @@ type AckInput = {
 
 export async function ackProspect(input: AckInput) {
   try {
-    await resend().emails.send({
-      from: env().FROM_EMAIL,
-      to: input.submission.email,
-      subject: 'Got your note — ZeroIndex',
-      react: ProspectAck({ submission: input.submission }),
-    });
+    await resend().emails.send(
+      {
+        from: env().FROM_EMAIL,
+        to: input.submission.email,
+        subject: 'Got your note — ZeroIndex',
+        react: ProspectAck({ submission: input.submission }),
+      },
+      // Idempotency key: a WDK retry/replay after a successful send won't
+      // double-email the prospect — Resend dedupes on the key.
+      { idempotencyKey: `prospect-ack-${input.submissionId}` },
+    );
   } catch (err) {
-    throw new RetryableError(`resend ack failed: ${err instanceof Error ? err.message : String(err)}`);
+    throw new RetryableError(
+      `resend ack failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 
   await db

@@ -56,6 +56,7 @@ describe('notifyOwner', () => {
         replyTo: 'dana@acme.com',
         subject: expect.stringContaining('build'),
       }),
+      expect.objectContaining({ idempotencyKey: 'owner-notify-s1' }),
     );
     expect(updateSet).toHaveBeenCalledTimes(1);
   });
