@@ -35,6 +35,8 @@ export default async function AdminIndex() {
                   <tr>
                     <th>When</th>
                     <th>Who</th>
+                    <th>Email</th>
+                    <th>Phone</th>
                     <th>Type</th>
                     <th>Fit</th>
                     <th>Status</th>
@@ -52,6 +54,10 @@ export default async function AdminIndex() {
                         <span className="font-medium">{r.name}</span>
                         <div className="muted-2 text-xs">{r.company ?? '—'}</div>
                       </td>
+                      <td className="email-cell" title={r.email}>
+                        {r.email}
+                      </td>
+                      <td className="num-cell">{r.phone ?? '—'}</td>
                       <td className="num-cell">{r.classification?.engagementType ?? '—'}</td>
                       <td className="num-cell">
                         {r.classification ? `${r.classification.fitScore}/5` : '—'}

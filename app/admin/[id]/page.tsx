@@ -17,6 +17,14 @@ export default async function AdminDetail({ params }: { params: Promise<{ id: st
     .limit(1);
   if (!row) notFound();
 
+  // Prefilled reply: opens the founder's default mail app with the prospect as
+  // recipient and the model's draft as the body. Subject is a sensible default
+  // the founder can edit. mailto bodies are length-limited by the client, but
+  // the draft is short by design (~180 words).
+  const draftMailto = row.triageDraft
+    ? `mailto:${row.email}?subject=${encodeURIComponent('Re: your note — ZeroIndex')}&body=${encodeURIComponent(row.triageDraft)}`
+    : null;
+
   return (
     <>
       <section className="pt-10 pb-8">
@@ -89,6 +97,17 @@ export default async function AdminDetail({ params }: { params: Promise<{ id: st
             <pre className="whitespace-pre-wrap font-sans text-[15px] leading-relaxed">
               {row.triageDraft}
             </pre>
+            {draftMailto ? (
+              <a
+                href={draftMailto}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 mt-5 px-3.5 py-2 rounded-md text-sm font-medium transition-opacity hover:opacity-80"
+                style={{ background: 'var(--accent-1)', color: '#ffffff' }}
+              >
+                Send draft reply ↗
+              </a>
+            ) : null}
           </div>
         </section>
       ) : null}
