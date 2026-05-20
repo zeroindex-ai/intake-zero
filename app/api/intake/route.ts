@@ -78,14 +78,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid body' }, { status: 400 });
   }
 
-  const emailLimit = await checkRateLimit({
-    scope: 'intake-email',
-    identifier: hash(body.email.toLowerCase().trim()),
-    limit: EMAIL_LIMIT,
-    windowMs: HOUR_MS,
-  });
-  if (!emailLimit.ok) return rateLimited(emailLimit.retryAfterSec);
-
   const dedupeHash = createHash('sha256')
     .update(body.email.toLowerCase().trim())
     .update('|')
@@ -101,9 +93,19 @@ export async function POST(req: Request) {
     )
     .limit(1);
 
+  // Dedupe before consuming the per-email quota: an identical resubmit is a
+  // no-op, so it shouldn't burn the prospect's rate-limit budget.
   if (existing[0]) {
     return NextResponse.json({ submissionId: existing[0].id, deduped: true });
   }
+
+  const emailLimit = await checkRateLimit({
+    scope: 'intake-email',
+    identifier: hash(body.email.toLowerCase().trim()),
+    limit: EMAIL_LIMIT,
+    windowMs: HOUR_MS,
+  });
+  if (!emailLimit.ok) return rateLimited(emailLimit.retryAfterSec);
 
   const id = randomUUID();
   await db.insert(schema.submissions).values({

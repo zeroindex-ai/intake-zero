@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { isPublicAddress, assertPublicUrl, pinnedLookup } from './safe-fetch';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { isPublicAddress, assertPublicUrl, pinnedLookup, safeFetch } from './safe-fetch';
 
 describe('isPublicAddress', () => {
   it('accepts ordinary public IPv4', () => {
@@ -95,5 +95,49 @@ describe('pinnedLookup', () => {
   it('returns the first address in single-lookup mode', () => {
     const fn = pinnedLookup([{ address: '93.184.216.34', family: 4 }]);
     expect(call(fn, {})).toHaveBeenCalledWith(null, '93.184.216.34', 4);
+  });
+});
+
+describe('safeFetch (redirect, re-validation, cap)', () => {
+  // Mock global fetch and use IP-literal URLs (no DNS) so the redirect loop and
+  // per-hop SSRF re-validation are exercised deterministically, offline.
+  let fetchMock: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  const redirectTo = (location: string) =>
+    new Response(null, { status: 302, headers: { location } });
+  const ok = (body: string) => new Response(body, { status: 200 });
+
+  it('follows a redirect, re-validates each hop, and returns the final body', async () => {
+    fetchMock
+      .mockResolvedValueOnce(redirectTo('http://1.1.1.1/next'))
+      .mockResolvedValueOnce(ok('hello world'));
+    const res = await safeFetch('http://93.184.216.34/start', { maxBytes: 1_000 });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('hello world');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects a redirect that points at a non-public address', async () => {
+    fetchMock.mockResolvedValueOnce(redirectTo('http://127.0.0.1/internal'));
+    await expect(safeFetch('http://93.184.216.34/start')).rejects.toThrow(/non-public IP literal/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('enforces the redirect limit', async () => {
+    fetchMock.mockResolvedValue(redirectTo('http://1.1.1.1/loop'));
+    await expect(safeFetch('http://93.184.216.34/start', { maxRedirects: 2 })).rejects.toThrow(
+      /too many redirects/,
+    );
+  });
+
+  it('caps the body at maxBytes even when it arrives in one chunk', async () => {
+    fetchMock.mockResolvedValueOnce(ok('x'.repeat(5_000)));
+    const res = await safeFetch('http://93.184.216.34/big', { maxBytes: 100 });
+    expect((await res.text()).length).toBe(100);
   });
 });

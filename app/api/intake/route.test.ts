@@ -78,6 +78,10 @@ describe('POST /api/intake', () => {
     expect(await res.json()).toEqual({ submissionId: 'existing-id', deduped: true });
     expect(insertValues).not.toHaveBeenCalled();
     expect(start).not.toHaveBeenCalled();
+    // a deduped resubmit must not consume the per-email quota
+    expect(checkRateLimit).not.toHaveBeenCalledWith(
+      expect.objectContaining({ scope: 'intake-email' }),
+    );
   });
 
   it('persists, starts the workflow, and returns ids on a fresh submission', async () => {

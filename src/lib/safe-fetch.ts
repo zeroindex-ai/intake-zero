@@ -176,7 +176,37 @@ type SafeFetchOptions = {
   headers?: Record<string, string>;
   timeoutMs?: number;
   maxRedirects?: number;
+  /** Stop reading the response body after this many bytes (the rest is aborted). */
+  maxBytes?: number;
 };
+
+// Read a response body but stop (and abort the rest of the stream) once maxBytes
+// is reached, so a hostile-but-public URL can't make us buffer an unbounded body.
+async function readCapped(res: Response, maxBytes: number): Promise<Uint8Array> {
+  if (!res.body) return new Uint8Array(await res.arrayBuffer());
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (total < maxBytes) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      total += value.length;
+    }
+  } finally {
+    await reader.cancel().catch(() => {});
+  }
+  const out = new Uint8Array(Math.min(total, maxBytes));
+  let offset = 0;
+  for (const chunk of chunks) {
+    if (offset >= out.length) break;
+    const take = Math.min(chunk.length, out.length - offset);
+    out.set(chunk.subarray(0, take), offset);
+    offset += take;
+  }
+  return out;
+}
 
 // Fetch a user-supplied URL with SSRF protection. Each hop is validated, and
 // the TCP connection is pinned to the validated IP (the Host header and TLS SNI
@@ -184,7 +214,7 @@ type SafeFetchOptions = {
 // so every hop is re-validated and re-pinned — neither a redirect nor a DNS
 // rebind can bounce the connection to an internal address.
 export async function safeFetch(raw: string, opts: SafeFetchOptions = {}): Promise<Response> {
-  const { headers, timeoutMs = 8_000, maxRedirects = 3 } = opts;
+  const { headers, timeoutMs = 8_000, maxRedirects = 3, maxBytes } = opts;
   let current = raw;
 
   for (let hop = 0; hop <= maxRedirects; hop++) {
@@ -208,10 +238,18 @@ export async function safeFetch(raw: string, opts: SafeFetchOptions = {}): Promi
           continue;
         }
       }
-      return new Response(await res.arrayBuffer(), {
+      // Cast: Uint8Array/ArrayBuffer are valid BodyInit at runtime, but the
+      // lib's generic Uint8Array<ArrayBufferLike> doesn't structurally match.
+      const body = (
+        maxBytes != null ? await readCapped(res, maxBytes) : await res.arrayBuffer()
+      ) as BodyInit;
+      const respHeaders = new Headers(res.headers);
+      // The body may be truncated; the original content-length would lie.
+      if (maxBytes != null) respHeaders.delete('content-length');
+      return new Response(body, {
         status: res.status,
         statusText: res.statusText,
-        headers: res.headers,
+        headers: respHeaders,
       });
     } finally {
       await dispatcher.close();

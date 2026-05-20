@@ -25,6 +25,7 @@ export async function enrichCompany(input: EnrichInput): Promise<EnrichmentResul
       const res = await safeFetch(input.url, {
         headers: { 'user-agent': 'intake-zero/0.1 (+https://intake.zeroindex.ai)' },
         timeoutMs: 8_000,
+        maxBytes: MAX_BYTES,
       });
       if (!res.ok) {
         if (res.status >= 500) throw new RetryableError(`upstream ${res.status}`);
