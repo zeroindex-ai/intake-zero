@@ -1,5 +1,6 @@
 'use step';
 
+import type Anthropic from '@anthropic-ai/sdk';
 import { eq } from 'drizzle-orm';
 import { db, schema } from '@/db/client';
 import type { ClassificationResult, EnrichmentResult } from '@/db/schema';
@@ -8,8 +9,7 @@ import { CLASSIFY_PROMPT } from '@/workflow/prompts';
 import { parseClassification } from '@/workflow/parse-classification';
 import { RetryableError, FatalError } from 'workflow';
 
-type ClassifyInput = {
-  submissionId: string;
+export type ClassificationInput = {
   problem: string;
   stack: string[];
   timeline: string | null;
@@ -17,7 +17,15 @@ type ClassifyInput = {
   enrichment: EnrichmentResult;
 };
 
-export async function classifySubmission(input: ClassifyInput): Promise<ClassificationResult> {
+type ClassifyInput = ClassificationInput & { submissionId: string };
+
+// Pure core: prompt → model → parsed/validated result. No DB writes. Takes an
+// injectable client so the eval harness can reuse the exact same prompt + parse
+// without the app's full env() (it passes its own Anthropic client).
+export async function runClassification(
+  input: ClassificationInput,
+  client: Anthropic = anthropic(),
+): Promise<ClassificationResult> {
   const userContent = JSON.stringify(
     {
       problem: input.problem,
@@ -36,7 +44,7 @@ export async function classifySubmission(input: ClassifyInput): Promise<Classifi
 
   let raw: string;
   try {
-    const res = await anthropic().messages.create({
+    const res = await client.messages.create({
       model: CLASSIFY_MODEL,
       max_tokens: 600,
       system: CLASSIFY_PROMPT,
@@ -47,14 +55,19 @@ export async function classifySubmission(input: ClassifyInput): Promise<Classifi
     raw = block.text;
   } catch (err) {
     if (err instanceof FatalError) throw err;
-    throw new RetryableError(`classify failed: ${err instanceof Error ? err.message : String(err)}`);
+    throw new RetryableError(
+      `classify failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 
-  const parsed = parseClassification(raw);
+  return parseClassification(raw);
+}
+
+export async function classifySubmission(input: ClassifyInput): Promise<ClassificationResult> {
+  const parsed = await runClassification(input);
   await db
     .update(schema.submissions)
     .set({ classification: parsed, status: 'drafting', updatedAt: new Date() })
     .where(eq(schema.submissions.id, input.submissionId));
   return parsed;
 }
-

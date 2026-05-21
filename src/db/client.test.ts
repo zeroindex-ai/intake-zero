@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { sql } from 'drizzle-orm';
 
 // NOTE: this file intentionally does NOT mock '@/db/client' — it exercises the
@@ -15,6 +15,17 @@ const RUNTIME_VARS = [
 ];
 
 describe('db client', () => {
+  // These tests mutate process.env; snapshot and fully restore so nothing
+  // bleeds into other (parallel) test files.
+  let savedEnv: NodeJS.ProcessEnv;
+  beforeEach(() => {
+    savedEnv = { ...process.env };
+  });
+  afterEach(() => {
+    for (const k of Object.keys(process.env)) delete process.env[k];
+    Object.assign(process.env, savedEnv);
+  });
+
   it('imports without requiring runtime secrets (build-safe lazy init)', async () => {
     // With every runtime var stripped, importing must not call env()/throw —
     // this is what lets `next build` collect page data without prod secrets.
