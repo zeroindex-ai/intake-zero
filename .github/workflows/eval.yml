@@ -46,8 +46,8 @@ jobs:
         env:
           # The eval injects its own Anthropic client, so this is the only secret needed.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # Tune after the first baseline run (golden fit-score ranges are estimates).
-          EVAL_PASS_THRESHOLD: '0.7'
+          # Baseline run was 16/16; 0.8 leaves ~1-item headroom for LLM nondeterminism.
+          EVAL_PASS_THRESHOLD: '0.8'
         run: |
           if [ -z "$ANTHROPIC_API_KEY" ]; then
             echo "ANTHROPIC_API_KEY secret not configured; skipping eval."
@@ -101,7 +101,7 @@ jobs:
             --in "artifacts/intake-zero/$(basename "$RESULT")" \
             --out public/intake-zero/latest.html \
             --project intake-zero \
-            --threshold 0.7
+            --threshold 0.8
 
           git add public/intake-zero/latest.html
           if git diff --staged --quiet; then

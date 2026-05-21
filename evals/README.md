@@ -34,8 +34,8 @@ on pushes/PRs that touch `src/workflow/**` or `evals/**`, on a daily cron, and o
 manual dispatch (a separate **Eval** check, not the main CI gate; dependabot is
 skipped). It needs the `ANTHROPIC_API_KEY` repo secret, uploads `evals/results/`
 as an artifact, and — if `EVALS_SITE_TOKEN` is set — publishes the report to
-`evals.zeroindex.ai/intake-zero`. The threshold starts at `0.7`; tune it once the
-golden fit-score ranges are calibrated against a real baseline.
+`evals.zeroindex.ai/intake-zero`. The gate is `0.8` (the baseline run was 16/16);
+tighten the golden fit-score ranges over time to make the eval more discriminating.
 
 ## Scope notes (v0.1, deliberately lean)
 
