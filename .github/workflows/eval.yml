@@ -95,6 +95,8 @@ jobs:
           cp "$GITHUB_WORKSPACE/$RESULT" artifacts/intake-zero/
 
           pnpm install --frozen-lockfile
+          # New project dir — render.ts writeFile() doesn't create parents.
+          mkdir -p public/intake-zero
           pnpm render \
             --in "artifacts/intake-zero/$(basename "$RESULT")" \
             --out public/intake-zero/latest.html \
