@@ -24,11 +24,13 @@ async function main(): Promise<void> {
       atMostOneCaseStudy,
     ],
     throttleMs: 250, // gentle on rate limits
+    resultsDir: join(import.meta.dirname, 'results'), // run-<ts>.json for CI artifacts
   });
 
   const passed = report.results.filter((r) => r.pass).length;
   const total = report.results.length;
-  console.log(`\n${passed}/${total} passed (${total ? Math.round((passed / total) * 100) : 0}%)\n`);
+  const pct = total ? Math.round((passed / total) * 100) : 0;
+  console.log(`\n${passed}/${total} passed (${pct}%)\n`);
 
   for (const r of report.results) {
     console.log(`  ${r.pass ? '✓' : '✗'} ${r.category}/${r.id}`);
@@ -41,8 +43,17 @@ async function main(): Promise<void> {
     console.log(`\nerrors (${report.errors.length}):`);
     for (const e of report.errors) console.log(`  [${e.id}] ${e.error}`);
   }
+  if (report.jsonPath !== undefined) console.log(`\nsaved: ${report.jsonPath}`);
 
-  if (passed !== total) process.exitCode = 1;
+  // Every item errored (e.g. bad/missing key) is a hard failure, not 0%.
+  if (total === 0) throw new Error('No eval results — every item errored out');
+
+  // Gate on pass rate (default 0.8, override via EVAL_PASS_THRESHOLD), matching
+  // the ask-zeroindex eval workflow.
+  const threshold = Number(process.env['EVAL_PASS_THRESHOLD'] ?? 0.8);
+  if (passed / total < threshold) {
+    throw new Error(`Pass rate ${pct}% below threshold ${(threshold * 100).toFixed(0)}%`);
+  }
 }
 
 main().catch((err: unknown) => {

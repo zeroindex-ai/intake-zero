@@ -25,8 +25,17 @@ ANTHROPIC_API_KEY=sk-ant-... pnpm eval
 ```
 
 This **hits the real models** (Haiku for classify, Sonnet for draft), so it costs a
-little per run and is **manual / not wired into CI** (like ask-zeroindex's set).
-Capture the pass rate as the baseline; re-run after prompt or model changes.
+little per run. `EVAL_PASS_THRESHOLD` (default `0.8`) gates the exit code.
+
+### In CI
+
+`.github/workflows/eval.yml` mirrors ask-zeroindex's pattern: it runs `pnpm eval`
+on pushes/PRs that touch `src/workflow/**` or `evals/**`, on a daily cron, and on
+manual dispatch (a separate **Eval** check, not the main CI gate; dependabot is
+skipped). It needs the `ANTHROPIC_API_KEY` repo secret, uploads `evals/results/`
+as an artifact, and — if `EVALS_SITE_TOKEN` is set — publishes the report to
+`evals.zeroindex.ai/intake-zero`. The threshold starts at `0.7`; tune it once the
+golden fit-score ranges are calibrated against a real baseline.
 
 ## Scope notes (v0.1, deliberately lean)
 

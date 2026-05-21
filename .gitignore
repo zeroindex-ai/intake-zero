@@ -24,6 +24,9 @@ playwright-report
 test-results
 coverage
 
+# evals
+evals/results
+
 # vercel
 .vercel
 

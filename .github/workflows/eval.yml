@@ -1,0 +1,110 @@
+name: Eval
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/workflow/**'
+      - 'evals/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/eval.yml'
+  pull_request:
+    paths:
+      - 'src/workflow/**'
+      - 'evals/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/eval.yml'
+  schedule:
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: eval-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eval:
+    # Secrets don't pass to dependabot-triggered runs; skip rather than fail.
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run eval
+        env:
+          # The eval injects its own Anthropic client, so this is the only secret needed.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Tune after the first baseline run (golden fit-score ranges are estimates).
+          EVAL_PASS_THRESHOLD: '0.7'
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "ANTHROPIC_API_KEY secret not configured; skipping eval."
+            echo "Add it under Settings → Secrets and variables → Actions to enable this workflow."
+            exit 0
+          fi
+          pnpm eval
+
+      - name: Upload eval results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results-${{ github.run_id }}
+          path: evals/results/
+          retention-days: 30
+
+      - name: Publish to evals-site
+        if: ${{ success() && github.event_name != 'pull_request' }}
+        env:
+          EVALS_SITE_TOKEN: ${{ secrets.EVALS_SITE_TOKEN }}
+        run: |
+          if [ -z "$EVALS_SITE_TOKEN" ]; then
+            echo "EVALS_SITE_TOKEN secret not configured; skipping publish."
+            echo "Create a fine-grained PAT scoped to zeroindex-ai/evals-site"
+            echo "(Contents: Read and write) and add it as EVALS_SITE_TOKEN."
+            exit 0
+          fi
+
+          RESULT=$(ls -t evals/results/run-*.json 2>/dev/null | head -1)
+          if [ -z "$RESULT" ]; then
+            echo "No eval result file found; skipping publish."
+            exit 0
+          fi
+          echo "Publishing $RESULT"
+
+          git clone --depth 1 \
+            "https://x-access-token:${EVALS_SITE_TOKEN}@github.com/zeroindex-ai/evals-site.git" \
+            /tmp/evals-site
+          cd /tmp/evals-site
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          mkdir -p artifacts/intake-zero
+          cp "$GITHUB_WORKSPACE/$RESULT" artifacts/intake-zero/
+
+          pnpm install --frozen-lockfile
+          pnpm render \
+            --in "artifacts/intake-zero/$(basename "$RESULT")" \
+            --out public/intake-zero/latest.html \
+            --project intake-zero \
+            --threshold 0.7
+
+          git add public/intake-zero/latest.html
+          if git diff --staged --quiet; then
+            echo "No HTML changes; nothing to publish."
+            exit 0
+          fi
+          git commit -m "publish: intake-zero eval (from run ${GITHUB_RUN_ID})"
+          git push origin main
