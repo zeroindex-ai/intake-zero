@@ -7,6 +7,7 @@ import type { ClassificationResult, EnrichmentResult } from '@/db/schema';
 import { anthropic, CLASSIFY_MODEL } from '@/workflow/anthropic';
 import { CLASSIFY_PROMPT } from '@/workflow/prompts';
 import { parseClassification } from '@/workflow/parse-classification';
+import { ModelOutputError } from '@/workflow/model-output-error';
 import { RetryableError, FatalError } from 'workflow';
 
 export type ClassificationInput = {
@@ -42,29 +43,30 @@ export async function runClassification(
     2,
   );
 
-  let raw: string;
+  const res = await client.messages.create({
+    model: CLASSIFY_MODEL,
+    max_tokens: 600,
+    system: CLASSIFY_PROMPT,
+    messages: [{ role: 'user', content: userContent }],
+  });
+  const block = res.content.find((c) => c.type === 'text');
+  if (!block || block.type !== 'text') throw new ModelOutputError('no text block from classifier');
+  return parseClassification(block.text);
+}
+
+export async function classifySubmission(input: ClassifyInput): Promise<ClassificationResult> {
+  let parsed: ClassificationResult;
   try {
-    const res = await client.messages.create({
-      model: CLASSIFY_MODEL,
-      max_tokens: 600,
-      system: CLASSIFY_PROMPT,
-      messages: [{ role: 'user', content: userContent }],
-    });
-    const block = res.content.find((c) => c.type === 'text');
-    if (!block || block.type !== 'text') throw new FatalError('no text block from classifier');
-    raw = block.text;
+    parsed = await runClassification(input);
   } catch (err) {
+    // Bad model output is deterministic → Fatal (no retry); a real FatalError
+    // passes through; anything else (transient API failure) → Retryable.
+    if (err instanceof ModelOutputError) throw new FatalError(err.message);
     if (err instanceof FatalError) throw err;
     throw new RetryableError(
       `classify failed: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
-
-  return parseClassification(raw);
-}
-
-export async function classifySubmission(input: ClassifyInput): Promise<ClassificationResult> {
-  const parsed = await runClassification(input);
   await db
     .update(schema.submissions)
     .set({ classification: parsed, status: 'drafting', updatedAt: new Date() })

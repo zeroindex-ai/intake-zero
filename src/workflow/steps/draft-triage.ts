@@ -6,6 +6,7 @@ import { db, schema } from '@/db/client';
 import type { ClassificationResult, EnrichmentResult, Submission } from '@/db/schema';
 import { anthropic, DRAFT_MODEL } from '@/workflow/anthropic';
 import { DRAFT_PROMPT } from '@/workflow/prompts';
+import { ModelOutputError } from '@/workflow/model-output-error';
 import { RetryableError, FatalError } from 'workflow';
 
 export type DraftCoreInput = {
@@ -36,27 +37,26 @@ export async function runDraft(
     2,
   );
 
-  let draft: string;
-  try {
-    const res = await client.messages.create({
-      model: DRAFT_MODEL,
-      max_tokens: 1_200,
-      system: DRAFT_PROMPT,
-      messages: [{ role: 'user', content: userContent }],
-    });
-    const block = res.content.find((c) => c.type === 'text');
-    if (!block || block.type !== 'text') throw new FatalError('no text block from drafter');
-    draft = block.text.trim();
-  } catch (err) {
-    if (err instanceof FatalError) throw err;
-    throw new RetryableError(`draft failed: ${err instanceof Error ? err.message : String(err)}`);
-  }
-
-  return draft;
+  const res = await client.messages.create({
+    model: DRAFT_MODEL,
+    max_tokens: 1_200,
+    system: DRAFT_PROMPT,
+    messages: [{ role: 'user', content: userContent }],
+  });
+  const block = res.content.find((c) => c.type === 'text');
+  if (!block || block.type !== 'text') throw new ModelOutputError('no text block from drafter');
+  return block.text.trim();
 }
 
 export async function draftTriage(input: DraftInput): Promise<string> {
-  const draft = await runDraft(input);
+  let draft: string;
+  try {
+    draft = await runDraft(input);
+  } catch (err) {
+    if (err instanceof ModelOutputError) throw new FatalError(err.message);
+    if (err instanceof FatalError) throw err;
+    throw new RetryableError(`draft failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
   await db
     .update(schema.submissions)
     .set({ triageDraft: draft, status: 'notifying', updatedAt: new Date() })

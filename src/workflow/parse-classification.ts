@@ -1,5 +1,5 @@
 import type { ClassificationResult } from '@/db/schema';
-import { FatalError } from 'workflow';
+import { ModelOutputError } from '@/workflow/model-output-error';
 
 const ENGAGEMENT_TYPES = ['advisory', 'build', 'audit', 'training', 'unclear'] as const;
 
@@ -34,9 +34,9 @@ function extractJson(raw: string): Record<string, unknown> {
       } catch {
         // Brace-delimited substring still isn't valid JSON — this is bad model
         // output, not a transient failure, so it must be Fatal (not retryable).
-        throw new FatalError('classifier did not return parseable JSON');
+        throw new ModelOutputError('classifier did not return parseable JSON');
       }
     }
-    throw new FatalError('classifier did not return JSON');
+    throw new ModelOutputError('classifier did not return JSON');
   }
 }
