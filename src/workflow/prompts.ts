@@ -10,6 +10,11 @@ Given a submission, return a JSON object with these fields and nothing else:
 - suggestedCaseStudies: array of 0-3 short slugs from this set:
   ["ask-zeroindex", "eval-pack", "trace-pack", "mcp-pack", "evals-site"]
 
+"lookingFor" is the prospect's own selection of what they want (plain-language
+outcomes); weight it heavily for engagementType — but the free-text "problem"
+wins if the two conflict. "teamSize" is a fit signal: a solo founder or small
+team scores higher; a 200+ org leans enterprise-procurement (score lower).
+
 Score lower for: enterprise procurement, RFP-style, requires team, requires
 on-site, regulated-industry work that needs SOC2/HIPAA (not in scope yet).
 Score higher for: focused production AI work, 4-12 week scope, founder/CTO

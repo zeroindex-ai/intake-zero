@@ -12,9 +12,11 @@ import { RetryableError, FatalError } from 'workflow';
 
 export type ClassificationInput = {
   problem: string;
+  lookingFor: string[];
   stack: string[];
   timeline: string | null;
   budget: string | null;
+  teamSize: string | null;
   enrichment: EnrichmentResult;
 };
 
@@ -30,9 +32,11 @@ export async function runClassification(
   const userContent = JSON.stringify(
     {
       problem: input.problem,
+      lookingFor: input.lookingFor,
       stack: input.stack,
       timeline: input.timeline,
       budget: input.budget,
+      teamSize: input.teamSize,
       enrichment: {
         fetched: input.enrichment.fetched,
         signals: input.enrichment.signals,

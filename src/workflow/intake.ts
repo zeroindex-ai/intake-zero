@@ -25,9 +25,11 @@ export async function intakeWorkflow(payload: IntakePayload) {
     const classification = await classifySubmission({
       submissionId: submission.id,
       problem: submission.problem,
+      lookingFor: submission.lookingFor,
       stack: submission.stack,
       timeline: submission.timeline ?? null,
       budget: submission.budget ?? null,
+      teamSize: submission.teamSize ?? null,
       enrichment,
     });
 

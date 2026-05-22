@@ -54,6 +54,23 @@ export default async function AdminDetail({ params }: { params: Promise<{ id: st
           <div className="label mb-3">Their problem</div>
           <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{row.problem}</p>
 
+          {row.lookingFor.length > 0 ? (
+            <div className="mt-6">
+              <div className="label mb-2">Looking for</div>
+              <div className="flex flex-wrap gap-1.5">
+                {row.lookingFor.map((x) => (
+                  <span
+                    key={x}
+                    className="mono text-xs px-2.5 py-1 rounded-full"
+                    style={{ border: '1px solid var(--line)', color: 'var(--muted)' }}
+                  >
+                    {x}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-[15px] mt-8 pt-6 border-t line">
             <div>
               <div className="label mb-1">Stack</div>
@@ -66,6 +83,18 @@ export default async function AdminDetail({ params }: { params: Promise<{ id: st
             <div>
               <div className="label mb-1">Budget</div>
               <div>{row.budget ?? '—'}</div>
+            </div>
+            <div>
+              <div className="label mb-1">Team size</div>
+              <div>{row.teamSize ?? '—'}</div>
+            </div>
+            <div>
+              <div className="label mb-1">Prefers</div>
+              <div>{row.contactPref ?? '—'}</div>
+            </div>
+            <div>
+              <div className="label mb-1">Heard via</div>
+              <div>{row.referral ?? '—'}</div>
             </div>
           </div>
         </div>

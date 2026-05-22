@@ -10,7 +10,10 @@ import { ModelOutputError } from '@/workflow/model-output-error';
 import { RetryableError, FatalError } from 'workflow';
 
 export type DraftCoreInput = {
-  submission: Pick<Submission, 'name' | 'company' | 'problem' | 'stack' | 'timeline' | 'budget'>;
+  submission: Pick<
+    Submission,
+    'name' | 'company' | 'problem' | 'lookingFor' | 'stack' | 'timeline' | 'budget'
+  >;
   enrichment: EnrichmentResult;
   classification: ClassificationResult;
 };
@@ -27,6 +30,7 @@ export async function runDraft(
     {
       from: { name: input.submission.name, company: input.submission.company },
       problem: input.submission.problem,
+      lookingFor: input.submission.lookingFor,
       stack: input.submission.stack,
       timeline: input.submission.timeline,
       budget: input.submission.budget,

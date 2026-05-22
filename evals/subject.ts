@@ -21,7 +21,15 @@ export const subject: Subject = async (question) => {
   const problem = question;
 
   const classification = await runClassification(
-    { problem, stack: [], timeline: null, budget: null, enrichment: EMPTY_ENRICHMENT },
+    {
+      problem,
+      lookingFor: [],
+      stack: [],
+      timeline: null,
+      budget: null,
+      teamSize: null,
+      enrichment: EMPTY_ENRICHMENT,
+    },
     getClient(),
   );
 
@@ -31,6 +39,7 @@ export const subject: Subject = async (question) => {
         name: 'Prospect',
         company: null,
         problem,
+        lookingFor: [],
         stack: [],
         timeline: null,
         budget: null,

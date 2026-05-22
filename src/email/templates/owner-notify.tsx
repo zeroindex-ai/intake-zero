@@ -65,9 +65,15 @@ export function OwnerNotify({ submission, enrichment, classification, triage, ba
       </pre>
 
       <div style={{ fontSize: 13, color: '#52525b' }}>
+        <div>
+          Looking for: {submission.lookingFor.length ? submission.lookingFor.join(', ') : '—'}
+        </div>
         <div>Stack: {submission.stack.length ? submission.stack.join(', ') : '—'}</div>
         <div>Timeline: {submission.timeline ?? '—'}</div>
         <div>Budget: {submission.budget ?? '—'}</div>
+        <div>Team size: {submission.teamSize ?? '—'}</div>
+        <div>Prefers: {submission.contactPref ?? '—'}</div>
+        <div>Heard via: {submission.referral ?? '—'}</div>
         {submission.url ? <div>URL: {submission.url}</div> : null}
         {enrichment.fetched ? (
           <div>Enrichment signals: {enrichment.signals.join(', ') || '—'}</div>

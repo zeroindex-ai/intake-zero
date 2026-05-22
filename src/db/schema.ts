@@ -15,12 +15,21 @@ export const submissions = sqliteTable('submissions', {
   role: text('role'),
   phone: text('phone'),
   problem: text('problem').notNull(),
+  // The prospect's selected "what are you looking for?" outcomes — the strongest
+  // intent signal for the classifier, especially when the prose is thin.
+  lookingFor: text('looking_for', { mode: 'json' })
+    .$type<string[]>()
+    .notNull()
+    .default(sql`'[]'`),
   stack: text('stack', { mode: 'json' })
     .$type<string[]>()
     .notNull()
     .default(sql`'[]'`),
   timeline: text('timeline'),
   budget: text('budget'),
+  teamSize: text('team_size'),
+  contactPref: text('contact_pref'),
+  referral: text('referral'),
   url: text('url'),
   dedupeHash: text('dedupe_hash').notNull(),
   enrichment: text('enrichment', { mode: 'json' }).$type<EnrichmentResult | null>(),

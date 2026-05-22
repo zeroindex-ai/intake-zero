@@ -25,9 +25,11 @@ const enrichment: EnrichmentResult = { fetched: false, summary: null, signals: [
 const input = {
   submissionId: 's1',
   problem: 'We need a RAG system',
+  lookingFor: ['Build something with AI'],
   stack: ['nextjs'],
   timeline: '4-8 weeks',
   budget: '$10k+',
+  teamSize: '2–10',
   enrichment,
 };
 

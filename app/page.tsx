@@ -8,7 +8,7 @@ export default function HomePage() {
         <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
           Tell me about your project.
         </h1>
-        <p className="mt-4 muted text-base leading-relaxed max-w-4xl">
+        <p className="mt-4 muted text-base leading-relaxed max-w-[60rem]">
           Three required fields. I read every one. Response within one business day with whether
           it&rsquo;s a fit and what the next step looks like &mdash; or a polite redirect if not.
         </p>
