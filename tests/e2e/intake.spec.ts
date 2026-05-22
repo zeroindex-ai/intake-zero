@@ -34,8 +34,8 @@ test.describe('intake flow', () => {
     await expect(page).toHaveURL(/\/$|\/intake/);
   });
 
-  test('admin gate: unauthenticated /admin redirects to /signin', async ({ page }) => {
-    await page.goto('/admin');
-    await expect(page).toHaveURL(/\/signin/);
+  test('admin gate: unauthenticated /admin returns 401 (Basic Auth)', async ({ page }) => {
+    const res = await page.goto('/admin');
+    expect(res?.status()).toBe(401);
   });
 });

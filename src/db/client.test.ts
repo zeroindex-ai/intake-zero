@@ -10,7 +10,6 @@ const RUNTIME_VARS = [
   'RESEND_API_KEY',
   'OWNER_EMAIL',
   'FROM_EMAIL',
-  'ADMIN_TOKEN',
   'PUBLIC_BASE_URL',
 ];
 
@@ -41,7 +40,6 @@ describe('db client', () => {
     process.env.RESEND_API_KEY = 'x';
     process.env.OWNER_EMAIL = 'a@b.co';
     process.env.FROM_EMAIL = 'a@b.co';
-    process.env.ADMIN_TOKEN = 'x'.repeat(40);
     process.env.PUBLIC_BASE_URL = 'http://localhost';
 
     const { db, schema } = await import('@/db/client');

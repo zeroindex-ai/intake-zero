@@ -7,7 +7,6 @@ const Env = z.object({
   RESEND_API_KEY: z.string().min(1),
   OWNER_EMAIL: z.string().email(),
   FROM_EMAIL: z.string().email(),
-  ADMIN_TOKEN: z.string().min(32),
   PUBLIC_BASE_URL: z.string().url(),
 });
 
