@@ -189,11 +189,6 @@ body {
 /* Canonical ZeroIndex subdomain chrome — see canonical-subdomain-layout memory. */
 .site-header {
   background: var(--bg);
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.2s ease;
-}
-.site-header.scrolled {
-  border-bottom-color: var(--line);
 }
 .brand-link {
   display: inline-flex;
@@ -248,18 +243,32 @@ body {
   outline-offset: 2px;
 }
 
+/* Canonical brand CTA pill — matches the apex "Start a project". Shared by the
+   header back link and the intake form's submit button. */
 .btn-primary {
-  background: var(--ink);
-  color: var(--bg);
-  border-radius: 8px;
-  transition: opacity 150ms ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  background: linear-gradient(120deg, #18181b 0%, #27272a 100%);
+  color: #faf9f5;
+  border-radius: 9999px;
+  text-decoration: none;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
 }
 .btn-primary:hover {
-  opacity: 0.88;
+  box-shadow: 0 8px 24px -12px rgba(124, 58, 237, 0.35);
+  transform: translateY(-2px);
 }
 .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-ghost {
