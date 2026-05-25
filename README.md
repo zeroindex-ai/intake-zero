@@ -80,5 +80,5 @@ the run page rendered. No visual regression, no cross-browser matrix.
 - Magic-link or OIDC admin auth (a single shared secret over HTTP Basic Auth is fine for v0.1).
 - CRM sync / Stripe / scheduling embed (Cal.com link goes in the triage email).
 - Visual-regression tests, multi-browser e2e.
-- Replacing the marketing site&rsquo;s `mailto:` CTA &mdash; one-line edit in
-  `zeroindexai/index.html` after first deploy is verified.
+- Replacing the marketing site&rsquo;s `mailto:` CTA &mdash; an edit in the Astro
+  `zeroindex-site` apex repo after first deploy is verified.

@@ -21,7 +21,7 @@ Source of truth is `STYLE_GUIDE.md` in the `zeroindex-site` repo. Local mirror i
 
 # Deploy
 
-Follow `deploy-zeroindex-vercel-app` skill verbatim. Turso → Vercel env vars → migrations → custom domain (`intake.zeroindex.ai`) → Cloudflare CNAME. The marketing-site `mailto:` swap in `zeroindexai/index.html:955` is hand-driven after deploy is verified.
+Follow `deploy-zeroindex-vercel-app` skill verbatim. Turso → Vercel env vars → migrations → custom domain (`intake.zeroindex.ai`) → Cloudflare CNAME. The marketing-site `mailto:` swap lives in the Astro `zeroindex-site` apex repo (the Contact CTA component, not a single `index.html`) and is hand-driven after deploy is verified.
 
 # What not to do
 

@@ -23,9 +23,9 @@ vi.mock('workflow/api', () => ({ start }));
 vi.mock('@/workflow/intake', () => ({ intakeWorkflow: 'WF' }));
 
 import { POST } from './route';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { checkRateLimit, sweepExpiredRateLimits } from '@/lib/rate-limit';
 
-const okLimit = { ok: true, remaining: 5, retryAfterSec: 3600 };
+const okLimit = { ok: true, remaining: 5, retryAfterSec: 3600, firstInWindow: false };
 const valid = { name: 'Dana', email: 'dana@example.com', problem: 'x'.repeat(40) };
 
 function post(body: unknown, headers: Record<string, string> = {}) {
@@ -39,6 +39,7 @@ function post(body: unknown, headers: Record<string, string> = {}) {
 describe('POST /api/intake', () => {
   beforeEach(() => {
     vi.mocked(checkRateLimit).mockReset().mockResolvedValue(okLimit);
+    vi.mocked(sweepExpiredRateLimits).mockClear();
     selectLimit.mockReset().mockResolvedValue([]);
     insertValues.mockClear();
     updateWhere.mockClear();
@@ -54,7 +55,9 @@ describe('POST /api/intake', () => {
 
   it('returns 429 with retry-after when the per-IP cap is exceeded', async () => {
     vi.mocked(checkRateLimit).mockImplementation(async (rule) =>
-      rule.scope === 'intake-ip' ? { ok: false, remaining: 0, retryAfterSec: 1200 } : okLimit,
+      rule.scope === 'intake-ip'
+        ? { ok: false, remaining: 0, retryAfterSec: 1200, firstInWindow: false }
+        : okLimit,
     );
     const res = await POST(post(valid));
     expect(res.status).toBe(429);
@@ -64,7 +67,9 @@ describe('POST /api/intake', () => {
 
   it('returns 429 when the per-email cap is exceeded', async () => {
     vi.mocked(checkRateLimit).mockImplementation(async (rule) =>
-      rule.scope === 'intake-email' ? { ok: false, remaining: 0, retryAfterSec: 600 } : okLimit,
+      rule.scope === 'intake-email'
+        ? { ok: false, remaining: 0, retryAfterSec: 600, firstInWindow: false }
+        : okLimit,
     );
     const res = await POST(post(valid));
     expect(res.status).toBe(429);
@@ -92,6 +97,20 @@ describe('POST /api/intake', () => {
     expect(typeof json.submissionId).toBe('string');
     expect(insertValues).toHaveBeenCalledTimes(1);
     expect(start).toHaveBeenCalledTimes(1);
+  });
+
+  it('sweeps expired buckets deterministically when the IP opens a fresh window', async () => {
+    vi.mocked(checkRateLimit).mockImplementation(async (rule) =>
+      rule.scope === 'intake-ip' ? { ...okLimit, firstInWindow: true } : okLimit,
+    );
+    await POST(post(valid));
+    expect(sweepExpiredRateLimits).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not sweep mid-window (no random trigger)', async () => {
+    // firstInWindow is false for every limiter call, so the sweep never runs.
+    await POST(post(valid));
+    expect(sweepExpiredRateLimits).not.toHaveBeenCalled();
   });
 
   it('rejects an oversized body with 413 before buffering it', async () => {
