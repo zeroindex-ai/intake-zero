@@ -12,6 +12,11 @@ export type RateLimitResult = {
   ok: boolean;
   remaining: number;
   retryAfterSec: number;
+  // True when this request opened a fresh window bucket (count === 1): the
+  // window boundary just rolled over for this (scope, identifier). Callers can
+  // use this as a deterministic trigger to sweep expired buckets — it fires
+  // exactly once per window per key, instead of on a random fraction of hits.
+  firstInWindow: boolean;
 };
 
 // Deterministic bucket key for a fixed window: same (scope, identifier) maps to
@@ -53,6 +58,7 @@ export async function checkRateLimit(
     ok: count <= rule.limit,
     remaining: Math.max(0, rule.limit - count),
     retryAfterSec,
+    firstInWindow: count === 1,
   };
 }
 

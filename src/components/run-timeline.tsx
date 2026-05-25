@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type Status = 'received' | 'enriching' | 'classifying' | 'drafting' | 'notifying' | 'sent' | 'failed';
 type InFlightStatus = Exclude<Status, 'failed'>;
@@ -35,9 +35,19 @@ export function RunTimeline({
   const [status, setStatus] = useState<Status>(initialStatus);
   const [failedAtStep, setFailedAtStep] = useState<string | null>(initialFailedAtStep ?? null);
 
+  // Mirror status into a ref so the polling effect can read the current value
+  // without depending on `status`. Depending on it would tear down and recreate
+  // the interval on every status transition; the ref lets the interval be set
+  // up once (per submissionId) and self-cancel when it reaches a terminal state.
+  const statusRef = useRef(status);
   useEffect(() => {
-    if (status === 'sent' || status === 'failed') return;
+    statusRef.current = status;
+  }, [status]);
+
+  useEffect(() => {
+    if (statusRef.current === 'sent' || statusRef.current === 'failed') return;
     let cancelled = false;
+    const handle = setInterval(poll, 1500);
 
     async function poll() {
       try {
@@ -47,18 +57,19 @@ export function RunTimeline({
         if (cancelled) return;
         setStatus(json.status);
         if (json.failedAtStep !== undefined) setFailedAtStep(json.failedAtStep);
+        // Terminal state reached — stop polling without recreating the interval.
+        if (json.status === 'sent' || json.status === 'failed') clearInterval(handle);
       } catch {
         // ignore — next tick will retry
       }
     }
 
-    const handle = setInterval(poll, 1500);
     poll();
     return () => {
       cancelled = true;
       clearInterval(handle);
     };
-  }, [submissionId, status]);
+  }, [submissionId]);
 
   // currentIdx semantics per status:
   //   'sent'                  → ORDER.length (every step done)

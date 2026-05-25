@@ -60,4 +60,52 @@ describe('checkRateLimit', () => {
     expect(res.ok).toBe(true);
     expect(res.remaining).toBe(3);
   });
+
+  it('flags the first request in a fresh window and resets the count on rollover', async () => {
+    const windowMs = 60_000;
+    const rule = { scope: 'ip', identifier: 'a', limit: 5, windowMs };
+
+    // First request of a window: the upsert inserts the bucket with count 1.
+    // A new window therefore starts the count over and signals firstInWindow,
+    // the deterministic trigger the route uses to sweep expired buckets.
+    returning.mockResolvedValue([{ count: 1 }]);
+    const opening = await checkRateLimit(rule, 0);
+    expect(opening.firstInWindow).toBe(true);
+    expect(opening.ok).toBe(true);
+    expect(opening.remaining).toBe(4);
+
+    // Subsequent requests in the same window increment the existing bucket —
+    // not first-in-window, so no sweep is triggered.
+    returning.mockResolvedValue([{ count: 2 }]);
+    const second = await checkRateLimit(rule, 30_000);
+    expect(second.firstInWindow).toBe(false);
+
+    // Crossing the window boundary maps to a new bucket whose count starts at 1
+    // again, so the count resets and firstInWindow fires once more.
+    expect(bucketKey('ip', 'a', windowMs, 30_000)).not.toBe(
+      bucketKey('ip', 'a', windowMs, windowMs),
+    );
+    returning.mockResolvedValue([{ count: 1 }]);
+    const rolledOver = await checkRateLimit(rule, windowMs);
+    expect(rolledOver.firstInWindow).toBe(true);
+    expect(rolledOver.remaining).toBe(4);
+  });
+});
+
+describe('sweepExpiredRateLimits', () => {
+  it('issues a delete keyed on the expiry cutoff', async () => {
+    const where = vi.fn().mockResolvedValue(undefined);
+    const del = vi.fn(() => ({ where }));
+    vi.resetModules();
+    vi.doMock('@/db/client', () => ({
+      db: { delete: del },
+      schema: { rateLimits: { bucket: 'bucket', count: 'count', expiresAt: 'expires_at' } },
+    }));
+    const mod = await import('./rate-limit');
+    await mod.sweepExpiredRateLimits(123_456);
+    expect(del).toHaveBeenCalledTimes(1);
+    expect(where).toHaveBeenCalledTimes(1);
+    vi.doUnmock('@/db/client');
+    vi.resetModules();
+  });
 });

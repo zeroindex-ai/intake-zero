@@ -30,7 +30,7 @@ Three benefits, in order of weight:
 | Durable pipeline runs to completion                   | >95% of submissions reach `status: sent` without manual intervention                                | ⏳     |
 | Owner sees triage draft within 30s of submission      | Median time from submit → owner-notify email = ≤30s                                                 | ⏳     |
 | Prospect sees the WDK pipeline live                   | `/runs/[id]` renders 6-step timeline; page reload mid-run resumes display from current step         | ⏳     |
-| Marketing site swap is clean                          | `zeroindexai/index.html` Contact CTA links to `intake.zeroindex.ai`; copy-email fallback remains    | ✅     |
+| Marketing site swap is clean                          | The Astro `zeroindex-site` apex Contact CTA links to `intake.zeroindex.ai`; copy-email fallback remains | ✅     |
 | Admin view is usable on phone                         | `/admin` table renders + paginates from a single-handed mobile view                                 | ⏳     |
 
 ### Out of scope (for v0.1)
@@ -184,7 +184,7 @@ What's done, what's next. Ordered, not calendared.
 ### Next (real follow-ups)
 
 1. **Visible workflow timing fix.** Run page polls every 1.5s — the `notifying` step often resolves in <1s, so users may see the transition flash. Consider a min-duration-per-step display or switch to WDK readable-stream-based updates.
-2. **Shared Stack config.** `src/lib/stack.ts` holds the intake-side copy of the apex's tier 1 + tier 2 pills. The apex still hard-codes them in `zeroindexai/index.html` §Stack. Long-term: extract to a single shared source (small npm package `@zeroindex-ai/stack` or a JSON file consumed by both) so the apex marketing list and the intake picker can't drift. For now they're kept manually in sync.
+2. **Shared Stack config.** `src/lib/stack.ts` holds the intake-side copy of the apex's tier 1 + tier 2 pills. The apex marketing site (the Astro `zeroindex-site` repo) still hard-codes its own copy in the Stack section. Long-term: extract to a single shared source (small npm package `@zeroindex-ai/stack` or a JSON file consumed by both) so the apex marketing list and the intake picker can't drift. For now they're kept manually in sync.
 
 ### Deferred (v0.2+)
 

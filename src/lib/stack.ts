@@ -1,9 +1,10 @@
 /**
  * Stack options shown in the intake form's "Stack (tap any that apply)" picker.
  *
- * Source: zeroindexai/index.html §Stack (tier 1 "Daily drivers" + tier 2
- * "In the toolbox"). Order matches the apex marketing site so prospects who
- * scanned the Stack section there see the same lineup here.
+ * Source: the apex marketing site (the Astro `zeroindex-site` repo) Stack
+ * section — tier 1 "Daily drivers" + tier 2 "In the toolbox". Order matches
+ * the apex so prospects who scanned the Stack section there see the same
+ * lineup here.
  *
  * Tier 3 ("Full toolbox") pills are intentionally excluded — those are
  * completeness, not the selling stack a prospect typically asks about.

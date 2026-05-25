@@ -61,9 +61,12 @@ export async function POST(req: Request) {
   });
   if (!ipLimit.ok) return rateLimited(ipLimit.retryAfterSec);
 
-  // Opportunistically prune expired buckets (~2% of requests) so rate_limits
-  // doesn't grow unbounded; a cheap DELETE at this volume.
-  if (Math.random() < 0.02) await sweepExpiredRateLimits();
+  // Prune expired buckets so rate_limits doesn't grow unbounded. Trigger is
+  // deterministic, not random: sweep only when this request opened a fresh
+  // window for its IP (firstInWindow). That fires at most once per IP per
+  // window — the natural moment a prior window just expired — so the cheap
+  // DELETE runs predictably instead of on a random fraction of requests.
+  if (ipLimit.firstInWindow) await sweepExpiredRateLimits();
 
   const declared = Number(req.headers.get('content-length'));
   if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
