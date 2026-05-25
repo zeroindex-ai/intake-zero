@@ -18,10 +18,7 @@ export default async function AdminIndex() {
     <>
       <section className="pt-10 pb-8">
         <div className="label mb-3">Admin</div>
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Submissions.</h1>
-        <p className="mt-4 muted text-base leading-relaxed max-w-4xl">
-          Every intake row, newest first. Click a name for the full triage detail.
-        </p>
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Intake</h1>
       </section>
 
       <section className="pt-2 pb-24">
