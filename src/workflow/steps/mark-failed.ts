@@ -20,5 +20,8 @@ export async function markFailed(submissionId: string, message: string) {
       updatedAt: new Date(),
     })
     .where(eq(schema.submissions.id, submissionId));
-  return { submissionId, status: 'failed' as const, message: message.slice(0, 500) };
+  // Return the full message. It is not persisted to a size-constrained column
+  // (the schema has no message column — only `failedAtStep` captures the step),
+  // so there is nothing to truncate against. The caller logs/discards this.
+  return { submissionId, status: 'failed' as const, message };
 }
