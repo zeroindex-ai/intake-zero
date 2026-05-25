@@ -69,17 +69,15 @@ the run page rendered. No visual regression, no cross-browser matrix.
 | --------------------------------- | --------------------------------------------- |
 | `/`                               | Public intake form                            |
 | `/runs/[id]`                      | Prospect-visible run timeline (polls status)  |
-| `/admin`                          | Submissions table (cookie-gated)              |
+| `/admin`                          | Submissions table (HTTP Basic Auth via root `proxy.ts`) |
 | `/admin/[id]`                     | Submission detail + classification + draft    |
-| `/admin/signin`                   | Token form                                    |
 | `POST /api/intake`                | Validates payload, starts workflow run        |
 | `GET /api/intake/[id]/status`     | JSON `{ status }` for polling                 |
-| `POST /api/admin/signin`          | Sets admin cookie                             |
 | `/.well-known/workflow/*`         | WDK runtime endpoints (mounted by `withWorkflow` in `next.config.ts`) |
 
 ## What&rsquo;s deferred
 
-- Magic-link or OIDC admin auth (single shared-secret cookie is fine for v0.1).
+- Magic-link or OIDC admin auth (a single shared secret over HTTP Basic Auth is fine for v0.1).
 - CRM sync / Stripe / scheduling embed (Cal.com link goes in the triage email).
 - Visual-regression tests, multi-browser e2e.
 - Replacing the marketing site&rsquo;s `mailto:` CTA &mdash; one-line edit in

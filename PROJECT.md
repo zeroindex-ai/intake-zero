@@ -37,7 +37,7 @@ Three benefits, in order of weight:
 
 - **Scheduling embed.** A Cal.com link goes in the triage email; no widget on the page.
 - **CRM sync, Stripe, proposals.** Turso is the system of record. Export-friendly schema; integrate later.
-- **Magic-link or OIDC admin auth.** Single shared-secret cookie is enough for one admin.
+- **Magic-link or OIDC admin auth.** A single shared secret over HTTP Basic Auth is enough for one admin.
 - **Multi-tenant.** Single ZeroIndex tenant.
 - **Conversational/chat intake.** Structured form converts better for B2B and feeds the workflow with clean inputs.
 - **Visual-regression tests, multi-browser e2e.** Three critical-path Playwright specs only.
@@ -68,7 +68,7 @@ Three benefits, in order of weight:
 | Avoided                                       | Why                                                                                                                                                                                          |
 | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`@workflow/ai` `DurableAgent`**             | Useful when there's a tool-use loop with side effects across many turns. Our two LLM calls are single-shot and live in plain `"use step"` functions; the extra abstraction would add weight without payoff. |
-| **`next-auth` v5 / OIDC**                     | One admin (the founder). One shared secret + cookie + timing-safe compare is fewer moving parts and zero version drift.                                                                      |
+| **`next-auth` v5 / OIDC**                     | One admin (the founder). One shared secret over HTTP Basic Auth + timing-safe compare is fewer moving parts and zero version drift.                                                          |
 | **shadcn/ui**                                 | The other ZeroIndex sites don't use it. Hand-rolling 5 primitives once is less code than the shadcn registry + generator + Radix dependency footprint.                                       |
 | **Chat-style intake**                         | Reads as gimmicky for B2B consultancy. Structured fields convert better and feed the workflow with cleaner inputs.                                                                           |
 | **Showing the prospect the triage classification** | Honest framing matters. The prospect sees pipeline status; the AI's read of their problem stays between the owner and the LLM.                                                          |
@@ -109,10 +109,10 @@ Three benefits, in order of weight:
 │   app/                                                                   │
 │     page.tsx                  public form                                │
 │     runs/[runId]/page.tsx     prospect-visible timeline                  │
-│     admin/                    cookie-gated submissions table             │
+│     admin/                    submissions table (Basic Auth)             │
 │     api/intake/route.ts       Zod validate → insert → workflow.start    │
 │     api/intake/[id]/status    JSON { status } for polling                │
-│     api/admin/signin          shared-secret cookie                      │
+│   proxy.ts                    Basic Auth gate on /admin (Next 16 mw)     │
 │                                                                          │
 │   src/workflow/                                                          │
 │     intake.ts                 "use workflow" orchestrator                │
@@ -179,6 +179,7 @@ What's done, what's next. Ordered, not calendared.
 - Public-surface hardening (2026-05-19): rate limiting on `POST /api/intake` (per-hashed-IP + per-hashed-email fixed windows, `rate_limits` table, migration `0002`), SSRF guard on enrichment (`src/lib/safe-fetch.ts`, per-redirect-hop validation), generic 400 (stopped echoing raw Zod errors), HMAC-derived admin cookie (raw secret no longer stored in the browser), prompt-injection notes in both LLM prompts
 - Vitest coverage for the workflow steps + guards (2026-05-19): `classify`, `draft-triage` (mocked Anthropic SDK + db: Retryable/Fatal mapping), `mark-failed` (status capture), `safe-fetch` (IP-range classification), `rate-limit`, `auth` (HMAC derivation)
 - Hardening round 2 (2026-05-19): SSRF guard pins the connection to the validated IP (closes the DNS-rebinding TOCTOU); 32 KB body cap on `POST /api/intake`; `start()` failure marks the row failed instead of stranding it; email steps carry Resend idempotency keys; the `safeFetch` dispatcher is closed on every path; Playwright specs wired into CI (the `e2e` job)
+- Admin-auth migration (2026-05-22, `e8d50bb`): retired the shared-secret signin cookie (the `/admin/signin` page, `POST /api/admin/signin`, and the HMAC-derived cookie noted above) in favor of the canonical ZeroIndex admin model — HTTP Basic Auth on `/admin` at the root `proxy.ts` (Next 16 middleware), `ADMIN_PASSWORD` + `timingSafeEqual`, no signin page/cookie/users table, identical to `trace-pack` and `contract-lens`. The earlier signin/cookie entries in this log are history, superseded by this.
 
 ### Next (real follow-ups)
 
