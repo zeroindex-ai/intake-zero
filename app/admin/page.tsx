@@ -17,8 +17,8 @@ export default async function AdminIndex() {
   return (
     <>
       <section className="pt-10 pb-8">
-        <div className="label mb-3">Admin</div>
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Intake</h1>
+        <div className="label mb-3">Admin • Intake</div>
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Submissions</h1>
       </section>
 
       <section className="pt-2 pb-24">
