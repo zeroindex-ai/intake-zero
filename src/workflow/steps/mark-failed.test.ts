@@ -38,9 +38,11 @@ describe('markFailed', () => {
     expect(updateSet).toHaveBeenCalledWith(expect.objectContaining({ failedAtStep: null }));
   });
 
-  it('truncates the returned message to 500 chars', async () => {
+  it('returns the full message without truncating', async () => {
     selectLimit.mockResolvedValue([{ status: 'drafting' }]);
-    const out = await markFailed('s3', 'x'.repeat(1000));
-    expect(out.message.length).toBe(500);
+    const long = 'x'.repeat(1000);
+    const out = await markFailed('s3', long);
+    expect(out.message).toBe(long);
+    expect(out.message.length).toBe(1000);
   });
 });
