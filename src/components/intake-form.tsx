@@ -50,7 +50,7 @@ function ChipGroup({
               key={o}
               type="button"
               onClick={() => onChange(on ? '' : o)}
-              className="mono text-xs px-3 py-1.5 rounded-full transition-colors"
+              className="mono text-xs px-3 py-1.5 rounded-full transition-colors inline-flex items-center justify-center min-h-[40px] sm:min-h-0"
               style={{
                 border: '1px solid var(--card-line)',
                 background: on ? 'var(--accent-1)' : 'transparent',
@@ -283,7 +283,7 @@ export function IntakeForm() {
                 key={s}
                 type="button"
                 onClick={() => toggleStack(s)}
-                className="mono text-xs px-3 py-1.5 rounded-full transition-colors"
+                className="mono text-xs px-3 py-1.5 rounded-full transition-colors inline-flex items-center justify-center min-h-[40px] sm:min-h-0"
                 style={{
                   border: '1px solid var(--card-line)',
                   background: on ? 'var(--accent-1)' : 'transparent',

@@ -111,6 +111,9 @@ body {
 .table-scroll {
   max-height: 615px;
   overflow-y: auto;
+  /* dense fixed-width grids exceed a phone's width — scroll sideways, don't clip.
+     Harmless on desktop (only engages when content overflows). */
+  overflow-x: auto;
   padding: 0 24px 8px;
 }
 
@@ -320,4 +323,26 @@ body {
   color: var(--card-muted);
   display: block;
   margin-bottom: 8px;
+}
+
+/* ---- Mobile (<= 640px) --------------------------------------------------
+   Desktop-first views kept usable on phones: the admin grid scrolls sideways
+   (see .table-scroll), chrome padding tightens, and the form's buttons/inputs
+   grow to the ~44px touch minimum. */
+@media (max-width: 640px) {
+  .card {
+    padding: 18px 16px;
+  }
+  .table-scroll {
+    padding: 0 16px 8px;
+  }
+  /* lift pill buttons + inputs to a comfortable touch height on phones */
+  .btn-primary,
+  .btn-ghost {
+    min-height: 44px;
+  }
+  .field-input {
+    padding-top: 13px;
+    padding-bottom: 13px;
+  }
 }
