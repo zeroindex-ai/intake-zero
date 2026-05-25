@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-/* Mirrors zeroindexai/STYLE_GUIDE.md §1 palette + the trace-pack outcome-state
+/* Mirrors zeroindex-site/STYLE_GUIDE.md §1 palette + the trace-pack outcome-state
    additions (--warn, --error). Two intake-only additions:
    --card and --card-ink for the dark-on-cream intake card per
    project_widget_design_intent. */

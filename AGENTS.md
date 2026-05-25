@@ -17,7 +17,7 @@ Vercel's Workflow DevKit (`workflow` on npm) is unfamiliar to most training data
 
 # Style / palette
 
-Source of truth is `STYLE_GUIDE.md` in the `zeroindexai` repo. Local mirror is `app/globals.css` (CSS variables) and `src/lib/palette.ts` (TS constants). Do not invent colors; reuse tokens.
+Source of truth is `STYLE_GUIDE.md` in the `zeroindex-site` repo. Local mirror is `app/globals.css` (CSS variables) and `src/lib/palette.ts` (TS constants). Do not invent colors; reuse tokens.
 
 # Deploy
 

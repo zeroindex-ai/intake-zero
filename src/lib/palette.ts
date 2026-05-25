@@ -1,7 +1,7 @@
 /**
  * Mirrors app/globals.css tokens for use in TS where we need string values
  * (e.g., dynamic styles, charts, email templates). Source of truth is the
- * STYLE_GUIDE.md in the zeroindexai repo.
+ * STYLE_GUIDE.md in the zeroindex-site repo.
  */
 export const palette = {
   bg: '#faf9f5',
