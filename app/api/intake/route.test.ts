@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { selectLimit, insertValues, updateWhere, start } = vi.hoisted(() => ({
+const { selectLimit, insertValues, updateSet, updateWhere, start } = vi.hoisted(() => ({
   selectLimit: vi.fn(),
   insertValues: vi.fn().mockResolvedValue(undefined),
+  updateSet: vi.fn(),
   updateWhere: vi.fn().mockResolvedValue(undefined),
   start: vi.fn(),
 }));
@@ -11,7 +12,12 @@ vi.mock('@/db/client', () => ({
   db: {
     select: () => ({ from: () => ({ where: () => ({ limit: selectLimit }) }) }),
     insert: () => ({ values: insertValues }),
-    update: () => ({ set: () => ({ where: updateWhere }) }),
+    update: () => ({
+      set: (values: unknown) => {
+        updateSet(values);
+        return { where: updateWhere };
+      },
+    }),
   },
   schema: { submissions: { id: 'id', dedupeHash: 'dedupe_hash', createdAt: 'created_at' } },
 }));
@@ -42,6 +48,7 @@ describe('POST /api/intake', () => {
     vi.mocked(sweepExpiredRateLimits).mockClear();
     selectLimit.mockReset().mockResolvedValue([]);
     insertValues.mockClear();
+    updateSet.mockClear();
     updateWhere.mockClear();
     start.mockReset().mockResolvedValue({ runId: 'wrun_test' });
   });
@@ -127,5 +134,20 @@ describe('POST /api/intake', () => {
     expect(await res.json()).toEqual({ error: 'could not start processing' });
     expect(insertValues).toHaveBeenCalledTimes(1);
     expect(updateWhere).toHaveBeenCalled(); // the mark-failed update ran
+  });
+
+  it('writes status=failed at the received step when start() rejects', async () => {
+    // The success path also issues an UPDATE (to set runId), so asserting that
+    // *some* update ran isn't enough — pin the actual payload to prove the row
+    // is moved to 'failed' rather than silently stranded at 'received'.
+    start.mockRejectedValue(new Error('wdk infra down'));
+    await POST(post(valid));
+    expect(start).toHaveBeenCalledTimes(1);
+    // The mark-failed branch issues exactly one UPDATE and never reaches the
+    // runId update, so the only captured payload is the failure write.
+    expect(updateSet).toHaveBeenCalledTimes(1);
+    expect(updateSet).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'failed', failedAtStep: 'received' }),
+    );
   });
 });
