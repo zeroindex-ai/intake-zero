@@ -36,7 +36,7 @@ importers:
         specifier: ^6.12.3
         version: 6.12.3(@react-email/render@2.0.8(react-dom@19.2.6(react@19.2.6))(react@19.2.6))
       undici:
-        specifier: ^6.21.0
+        specifier: ^6.25.0
         version: 6.25.0
       workflow:
         specifier: ^4.2.4
