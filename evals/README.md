@@ -34,7 +34,10 @@ on pushes/PRs that touch `src/workflow/**` or `evals/**`, on a daily cron, and o
 manual dispatch (a separate **Eval** check, not the main CI gate; dependabot is
 skipped). It needs the `ANTHROPIC_API_KEY` repo secret, uploads `evals/results/`
 as an artifact, and — if `EVALS_SITE_TOKEN` is set — publishes the report to
-`evals.zeroindex.ai/intake-zero`. The gate is `0.8` (the baseline run was 16/16);
+`evals.zeroindex.ai/intake-zero` with `--redact-answers`, which strips the
+generated draft-email bodies (internal) while keeping pass-rate, categories,
+timings, and checks public. The full drafts stay in the CI run's
+`evals/results/` artifact. The gate is `0.8` (the baseline run was 16/16);
 tighten the golden fit-score ranges over time to make the eval more discriminating.
 
 ## Scope notes (v0.1, deliberately lean)

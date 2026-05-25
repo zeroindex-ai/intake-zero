@@ -97,11 +97,15 @@ jobs:
           pnpm install --frozen-lockfile
           # New project dir — render.ts writeFile() doesn't create parents.
           mkdir -p public/intake-zero
+          # --redact-answers strips the generated draft-email bodies from the
+          # public report (intake's model output is internal); pass-rate,
+          # categories, timings, and checks still publish.
           pnpm render \
             --in "artifacts/intake-zero/$(basename "$RESULT")" \
             --out public/intake-zero/latest.html \
             --project intake-zero \
-            --threshold 0.8
+            --threshold 0.8 \
+            --redact-answers
 
           git add public/intake-zero/latest.html
           if git diff --staged --quiet; then
