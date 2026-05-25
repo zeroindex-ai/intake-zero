@@ -26,6 +26,6 @@ Follow `deploy-zeroindex-vercel-app` skill verbatim. Turso → Vercel env vars �
 # What not to do
 
 - Don't add a CRM/Stripe integration in v0.1 — Turso is the system of record.
-- Don't replace the single-secret admin cookie with full magic-link auth until there's a second admin user.
+- Don't replace the single-secret admin Basic Auth gate (root `proxy.ts`) with full magic-link auth until there's a second admin user.
 - Don't sweep visual changes; intake-zero shares tokens with the rest of the ZeroIndex sites — fix the named element only.
 - Don't commit `.env.local` or any real Turso/Anthropic/Resend keys. The `.gitignore` already protects this; double-check before `git add -A`.
