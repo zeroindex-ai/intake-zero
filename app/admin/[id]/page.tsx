@@ -28,9 +28,11 @@ export default async function AdminDetail({ params }: { params: Promise<{ id: st
   return (
     <>
       <section className="pt-10 pb-8">
-        <Link href="/admin" className="label mb-3 inline-block hover:opacity-70">
-          ← all submissions
-        </Link>
+        <div className="label mb-3">
+          <Link href="/admin" className="subtle">
+            ← Admin • Intake
+          </Link>
+        </div>
         <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{row.name}</h1>
         <div className="muted mt-2 text-base">
           {row.role ? `${row.role} · ` : ''}
