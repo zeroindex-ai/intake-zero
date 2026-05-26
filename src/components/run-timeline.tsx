@@ -97,13 +97,15 @@ export function RunTimeline({
   const [displayIdx, setDisplayIdx] = useState(targetIdx);
   useEffect(() => {
     if (displayIdx === targetIdx) return;
-    // targetIdx normally only climbs; if it ever regresses (e.g. a late failure
-    // with no recorded step → -1), snap back rather than animate downward.
-    if (displayIdx > targetIdx) {
-      setDisplayIdx(targetIdx);
-      return;
-    }
-    const t = setTimeout(() => setDisplayIdx((d) => d + 1), MIN_STEP_MS);
+    // Advance one step toward target after a min dwell; if target ever regresses
+    // (e.g. a late failure with no recorded step → -1) snap straight to it. Both
+    // run inside the timer rather than synchronously in the effect, so the update
+    // can't trigger a cascading render.
+    const advancing = displayIdx < targetIdx;
+    const t = setTimeout(
+      () => setDisplayIdx((d) => (advancing ? d + 1 : targetIdx)),
+      advancing ? MIN_STEP_MS : 0,
+    );
     return () => clearTimeout(t);
   }, [displayIdx, targetIdx]);
 
