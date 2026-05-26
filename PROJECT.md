@@ -108,7 +108,7 @@ Three benefits, in order of weight:
 │                                                                          │
 │   app/                                                                   │
 │     page.tsx                  public form                                │
-│     runs/[runId]/page.tsx     prospect-visible timeline                  │
+│     runs/[id]/page.tsx        prospect-visible timeline                  │
 │     admin/                    submissions table (Basic Auth)             │
 │     api/intake/route.ts       Zod validate → insert → workflow.start    │
 │     api/intake/[id]/status    JSON { status } for polling                │

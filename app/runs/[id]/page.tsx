@@ -8,12 +8,12 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = { title: 'Intake received · ZeroIndex' };
 
-export default async function RunPage({ params }: { params: Promise<{ runId: string }> }) {
-  const { runId } = await params;
+export default async function RunPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const [row] = await db
     .select()
     .from(schema.submissions)
-    .where(eq(schema.submissions.id, runId))
+    .where(eq(schema.submissions.id, id))
     .limit(1);
 
   if (!row) notFound();
