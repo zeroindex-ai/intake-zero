@@ -23,6 +23,11 @@ const ORDER: InFlightStatus[] = [
   'sent',
 ];
 
+// Each step stays visibly "active" at least this long before the timeline
+// advances, so a backend step that finished faster than the 1.5s poll (notably
+// `notifying`, often <1s) isn't skipped over silently between two polls.
+const MIN_STEP_MS = 650;
+
 export function RunTimeline({
   submissionId,
   initialStatus,
@@ -71,12 +76,12 @@ export function RunTimeline({
     };
   }, [submissionId]);
 
-  // currentIdx semantics per status:
-  //   'sent'                  → ORDER.length (every step done)
+  // targetIdx — where the backend says we are:
+  //   'sent'                   → ORDER.length (every step done)
   //   'failed' with known step → index of that step (failed marker on it, prior done, later pending)
   //   'failed' with no step    → -1 (legacy rows pre-failedAtStep column; render all pending)
-  //   in-flight               → index of current step (prior done, this one active, later pending)
-  const currentIdx =
+  //   in-flight                → index of the current step
+  const targetIdx =
     status === 'sent'
       ? ORDER.length
       : status === 'failed'
@@ -85,15 +90,32 @@ export function RunTimeline({
           : -1
         : ORDER.indexOf(status as InFlightStatus);
 
+  // displayIdx trails targetIdx, advancing one step at a time with a minimum
+  // dwell so a step the backend blew through faster than the poll still gets a
+  // visible "active" moment. Seeded at the initial target so an already-finished
+  // run (revisited later) renders complete at once rather than re-animating.
+  const [displayIdx, setDisplayIdx] = useState(targetIdx);
+  useEffect(() => {
+    if (displayIdx === targetIdx) return;
+    // targetIdx normally only climbs; if it ever regresses (e.g. a late failure
+    // with no recorded step → -1), snap back rather than animate downward.
+    if (displayIdx > targetIdx) {
+      setDisplayIdx(targetIdx);
+      return;
+    }
+    const t = setTimeout(() => setDisplayIdx((d) => d + 1), MIN_STEP_MS);
+    return () => clearTimeout(t);
+  }, [displayIdx, targetIdx]);
+
   return (
     <ol className="space-y-3">
       {STEPS.map((step, i) => {
         const state: 'done' | 'active' | 'pending' | 'failed' =
-          status === 'failed' && i === currentIdx
+          status === 'failed' && i === targetIdx && displayIdx >= targetIdx
             ? 'failed'
-            : i < currentIdx
+            : i < displayIdx
               ? 'done'
-              : i === currentIdx
+              : i === displayIdx
                 ? 'active'
                 : 'pending';
         return (

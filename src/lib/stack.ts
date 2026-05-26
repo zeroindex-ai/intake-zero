@@ -1,17 +1,15 @@
 /**
  * Stack options shown in the intake form's "Stack (tap any that apply)" picker.
  *
- * Source: the apex marketing site (the Astro `zeroindex-site` repo) Stack
- * section — tier 1 "Daily drivers" + tier 2 "In the toolbox". Order matches
- * the apex so prospects who scanned the Stack section there see the same
- * lineup here.
+ * Mirror of the apex marketing site's `SELLING_STACK` (tier 1 + tier 2),
+ * canonical in `zeroindex-ai/zeroindex-site` at `src/data/stack.ts`. The two
+ * repos can't share a file, so this is a deliberate derived copy: the apex
+ * Stack section renders from that data, and this list must match its tier 1 +
+ * tier 2 pills and order, so a prospect sees the same lineup in both places.
+ * Keep them in sync when either changes.
  *
  * Tier 3 ("Full toolbox") pills are intentionally excluded — those are
  * completeness, not the selling stack a prospect typically asks about.
- *
- * Long-term goal: a single shared config (npm package or JSON) consumed by
- * both this form and the apex Stack section to prevent drift. For now this
- * is the single intake-side copy.
  */
 export const STACK_OPTIONS: readonly string[] = [
   // Tier 1 — Daily drivers (the sellers)
