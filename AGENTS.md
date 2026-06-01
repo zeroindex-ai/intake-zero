@@ -1,3 +1,77 @@
+# intake-zero — agent guide
+
+Claude-backed prospect intake for the ZeroIndex consultancy. A public form at
+`intake.zeroindex.ai` collects project inquiries; a durable Vercel Workflow DevKit
+pipeline persists, enriches, classifies, drafts a triage reply, and notifies.
+
+The *why* and the architecture live in `PROJECT.md`. This file is how to work here.
+
+## Guardrails (do not violate)
+
+- **Never commit secrets.** `.env.local` and real Turso/Anthropic/Resend/etc. keys
+  stay out of git (`.gitignore` covers them — double-check before `git add -A`).
+- **Public repo → sanitize docs.** No machine paths, vault names, private-memory
+  refs, or sprint/portfolio framing in any committed `.md`. The `md-review-gate`
+  hook enforces this at commit time.
+- **Branch before the first commit.** Run `git branch` and confirm — repos are
+  sometimes left on an in-flight feature branch. Don't assume `main`.
+- **Visual changes: preview before commit.** Run the dev server and get a human
+  eyeball/approval BEFORE committing UI changes. Non-visual changes follow normal flow.
+- **Scope UI edits to the named element.** "Make X taller" changes only X. Decouple
+  shared tokens first; don't grow siblings.
+- **Admin stays Basic Auth.** `/admin` is gated by root `proxy.ts` (Basic Auth,
+  `ADMIN_PASSWORD` + `timingSafeEqual`). Do NOT add a signin page, cookie, or users
+  table until there's a second admin user.
+- **Public endpoints need rate limiting + SSRF guards** (P0). A dedupe hash is not a
+  rate limit.
+
+## Commands
+
+```bash
+pnpm dev          # local dev (localhost:3000)
+pnpm test         # vitest run
+pnpm test:e2e     # playwright (boots dev server)
+pnpm typecheck    # tsc --noEmit
+pnpm lint         # eslint
+pnpm build        # next build (also the CI gate)
+pnpm eval         # tsx evals/run.ts
+pnpm db:generate  # drizzle-kit: generate a migration from schema changes
+pnpm db:migrate   # apply migrations (local, --env-file=.env.local)
+```
+
+## Conventions & gotchas
+
+- **Lazy `db()` singleton.** The libsql client + strict `env()` init are deferred to
+  first request, NOT module load — a top-level `env()` makes `next build` require
+  runtime secrets and preview deploys fail. Keep DB access behind the lazy proxy.
+- **libsql on Vercel needs the undici fetch workaround.** Vercel's fetch
+  instrumentation corrupts libsql's request ("expected non-null body source"); the
+  client passes `undici`'s `fetch` (decomposed to url+init). Don't replace it with
+  the global fetch.
+- **Stale CSS after a `globals.css` edit** = Next 16 + Turbopack caching. `rm -rf
+  .next` + restart dev (hard-refresh/incognito won't fix it).
+- **Favicon lives in `app/favicon.ico`**, not `public/` (the app router intercepts it).
+- **SSR everything** — no client-side data fetches for first paint; render on the server.
+
+## Where to look
+
+- `PROJECT.md` — why it exists, decisions, architecture, the public contract.
+- Chrome/layout: the `zeroindex-app-layout` skill (canonical header/footer/spacing).
+- Design tokens: `STYLE_GUIDE.md` in the `zeroindex-site` repo (mirrored in
+  `app/globals.css`). Don't invent colors.
+- Deploy: the `deploy-zeroindex-vercel-app` skill (Turso → Vercel env → migrations → domain).
+
+## AI pipeline
+
+- **Eval harness is the contract for quality.** `pnpm eval` runs the golden set;
+  don't change retrieval/prompts/models without re-running it. Record the headline
+  metric in PROJECT.md.
+- **Model picks are deliberate and documented** in PROJECT.md's decision log — pick by
+  eval, not vibe. `claude-haiku-4-5` for classification, `claude-sonnet-4-6` for the
+  triage draft. Prompt caching where it helps.
+- **Cited output must be escaped** — HTML-escape any model text rendered to the page
+  (five-entity coverage).
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know
