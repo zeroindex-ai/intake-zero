@@ -1,5 +1,7 @@
 # intake-zero — Project Documentation
 
+> **Phase:** Production
+>
 > **Status: live at [intake.zeroindex.ai](https://intake.zeroindex.ai).** Full pipeline (persist → enrich → classify → draft → notify owner → ack prospect) verified end-to-end against production Anthropic + Resend. Resend domain `zeroindex.ai` is verified — `FROM_EMAIL=intake@zeroindex.ai`, delivers to any recipient. Wired to the Contact CTA on `zeroindex.ai`.
 
 This document captures the scope, strategic decisions, architecture, and ordered work for `intake-zero` — the Claude-backed prospect intake behind the Contact CTA on `zeroindex.ai`.
